@@ -22,7 +22,7 @@ export default function Sidebar() {
   const { isDark, toggleTheme } = useTheme();
 
   return (
-    <aside className={`w-64 h-screen fixed left-0 top-0 flex flex-col border-r ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+    <aside className={`w-64 h-screen flex flex-col border-r flex-shrink-0 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
       <div className="p-6 border-b border-inherit">
         <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight">
           <span className="text-navy-800 dark:text-white">KAI</span>

@@ -7,10 +7,10 @@ export default function Layout() {
   const { isDark } = useTheme();
 
   return (
-    <div className={isDark ? 'dark' : ''}>
+    <div className={`flex h-screen ${isDark ? 'dark' : ''}`}>
       <Sidebar />
-      <main className={`ml-64 min-h-screen ${isDark ? 'bg-gray-950 text-gray-100' : 'bg-offwhite text-gray-900'}`}>
-        <div className="p-8">
+      <main className={`flex-1 overflow-auto ${isDark ? 'bg-gray-950 text-gray-100' : 'bg-offwhite text-gray-900'}`}>
+        <div className="p-8 max-w-7xl mx-auto">
           <Outlet />
         </div>
       </main>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTrading } from '../context/TradingContext';
 import { useTheme } from '../context/ThemeContext';
 import { STOCKS } from '../data/stocks';
-import { formatCurrency, formatDate } from '../utils/helpers';
+import { formatCurrency } from '../utils/helpers';
 import { Bell, Plus, Trash2, TrendingUp, TrendingDown, Activity, BarChart3 } from 'lucide-react';
 import { Alert } from '../types';
 

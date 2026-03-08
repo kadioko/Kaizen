@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTrading } from '../context/TradingContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatCurrency, formatPercent } from '../utils/helpers';
-import { Brain, Send, Sparkles, AlertTriangle, BookOpen } from 'lucide-react';
+import { Brain, Send, Sparkles, AlertTriangle } from 'lucide-react';
 import { ChatMessage } from '../types';
 
 const COACHING_RESPONSES: Record<string, string> = {

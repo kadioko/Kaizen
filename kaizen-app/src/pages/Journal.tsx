@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useTrading } from '../context/TradingContext';
 import { useTheme } from '../context/ThemeContext';
-import { formatCurrency, formatDate, formatPercent } from '../utils/helpers';
-import { BookOpen, Plus, Star, CheckCircle, XCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { formatCurrency, formatDate } from '../utils/helpers';
+import { BookOpen, Plus, Star, CheckCircle, XCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 export default function Journal() {
@@ -44,10 +44,6 @@ export default function Journal() {
 
   const COLORS = ['#0F3A6B', '#D4AF37', '#22C55E', '#EF4444', '#8B5CF6'];
 
-  const buyVsSell = [
-    { name: 'Buys', value: trades.filter(t => t.type === 'buy').length },
-    { name: 'Sells', value: trades.filter(t => t.type === 'sell').length },
-  ];
 
   const strategyData = trades.reduce((acc, t) => {
     const strat = t.strategy || 'No Strategy';

@@ -5,7 +5,7 @@ import { STOCKS, getStockCandles } from '../data/stocks';
 import { formatCurrency, formatPercent, calculateRSI, calculateSMA, calculateEMA, calculateMACD, calculateBollingerBands } from '../utils/helpers';
 import {
   ComposedChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Area, ReferenceLine, Legend
+  CartesianGrid, ReferenceLine
 } from 'recharts';
 
 type Indicator = 'sma20' | 'sma50' | 'sma200' | 'ema12' | 'ema26' | 'bollinger' | 'rsi' | 'macd' | 'volume';

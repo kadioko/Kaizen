@@ -36,7 +36,7 @@ export default function Learn() {
             <span className={`text-xs font-medium px-2 py-1 rounded capitalize ${isDark ? 'bg-gray-800 text-gray-400' : 'bg-navy-50 text-navy-700'}`}>
               {article.category.replace('-', ' ')}
             </span>
-            <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold mt-4 leading-tight">{article.title}</h1>
+            <h1 className="font-display text-3xl font-bold mt-4 leading-tight">{article.title}</h1>
             <div className={`flex items-center gap-4 mt-3 text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
               <span>{article.author}</span>
               <span>·</span>
@@ -67,7 +67,7 @@ export default function Learn() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold flex items-center gap-3">
+        <h1 className="font-display text-3xl font-bold flex items-center gap-3">
           <GraduationCap className="text-gold-400" /> Educational Hub
         </h1>
         <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>

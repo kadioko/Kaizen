@@ -93,7 +93,7 @@ export default function Coach() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold flex items-center gap-3">
+        <h1 className="font-display text-3xl font-bold flex items-center gap-3">
           <Brain className="text-gold-400" /> AI Coach
         </h1>
         <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>

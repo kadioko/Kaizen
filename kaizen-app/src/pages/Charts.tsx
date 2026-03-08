@@ -80,7 +80,7 @@ export default function Charts() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold">Technical Analysis</h1>
+          <h1 className="font-display text-3xl font-bold">Technical Analysis</h1>
           <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Charts and indicators for informed decisions</p>
         </div>
         <div className="flex items-center gap-3">

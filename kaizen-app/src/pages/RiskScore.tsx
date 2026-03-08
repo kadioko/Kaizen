@@ -64,7 +64,7 @@ export default function RiskScore() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold">Risk Analysis</h1>
+        <h1 className="font-display text-3xl font-bold">Risk Analysis</h1>
         <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Understand and manage your portfolio risk</p>
       </div>
 

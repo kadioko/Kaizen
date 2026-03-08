@@ -76,7 +76,7 @@ export default function Pricing() {
   return (
     <div>
       <div className="text-center mb-12">
-        <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold">Choose Your Plan</h1>
+        <h1 className="font-display text-4xl font-bold">Choose Your Plan</h1>
         <p className={`mt-3 text-lg ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           Invest in your trading education, not in predictions
         </p>
@@ -150,7 +150,7 @@ export default function Pricing() {
       </div>
 
       <div className={`max-w-3xl mx-auto rounded-xl p-8 shadow-sm text-center ${cardBg}`}>
-        <h3 className="font-[family-name:var(--font-display)] text-xl font-bold mb-3">Our Promise</h3>
+        <h3 className="font-display text-xl font-bold mb-3">Our Promise</h3>
         <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
           We don't sell predictions. We don't promise returns. We provide tools and education to help you
           develop disciplined trading habits. Most traders lose money — our goal is to help you understand why

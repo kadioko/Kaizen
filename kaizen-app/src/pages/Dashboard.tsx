@@ -43,7 +43,7 @@ export default function Dashboard() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold">Dashboard</h1>
+        <h1 className="font-display text-3xl font-bold">Dashboard</h1>
         <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Your trading overview and performance metrics</p>
       </div>
 

@@ -55,7 +55,7 @@ export default function PaperTrade() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold">Paper Trading</h1>
+        <h1 className="font-display text-3xl font-bold">Paper Trading</h1>
         <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           Practice with virtual ${formatCurrency(100000).replace('$', '')} — no real money at risk
         </p>

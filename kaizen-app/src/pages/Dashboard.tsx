@@ -5,7 +5,7 @@ import { useTrading } from '../context/TradingContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatCurrency, formatPercent } from '../utils/helpers';
 import { STOCKS } from '../data/stocks';
-import { XAxis, YAxis, ResponsiveContainer, Tooltip, AreaChart } from 'recharts';
+import { XAxis, YAxis, ResponsiveContainer, Tooltip, AreaChart, Area } from 'recharts';
 import { getStockCandles } from '../data/stocks';
 
 function StatCard({ title, value, subtitle, icon: Icon, trend }: {

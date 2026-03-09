@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTrading } from '../context/TradingContext';
+import { useMarketData } from '../context/MarketDataContext';
 import { useTheme } from '../context/ThemeContext';
-import { STOCKS } from '../data/stocks';
 import { formatCurrency } from '../utils/helpers';
 import { Bell, Plus, Trash2, TrendingUp, TrendingDown, Activity, BarChart3 } from 'lucide-react';
 import { Alert, Stock } from '../types';
@@ -24,6 +24,7 @@ const ALERT_TYPES: { value: Alert['type']; label: string; icon: React.ElementTyp
 export default function Alerts() {
   const { isDark } = useTheme();
   const { alerts, addAlert, removeAlert } = useTrading();
+  const { instruments } = useMarketData();
   const [showForm, setShowForm] = useState(false);
   const [symbol, setSymbol] = useState('AAPL');
   const [alertType, setAlertType] = useState<Alert['type']>('price_above');
@@ -73,7 +74,7 @@ export default function Alerts() {
                 onChange={e => setSymbol(e.target.value)}
                 className={`mt-1 w-full px-3 py-2 rounded-lg border text-sm outline-none ${inputBg}`}
               >
-                {STOCKS.map(s => <option key={s.symbol} value={s.symbol}>{s.symbol} — {s.name}</option>)}
+                {instruments.map(s => <option key={s.symbol} value={s.symbol}>{s.symbol} — {s.name}</option>)}
               </select>
             </div>
             <div>
@@ -145,7 +146,7 @@ export default function Alerts() {
         ) : (
           <div className="space-y-3">
             {activeAlerts.map(alert => {
-              const stock = STOCKS.find(s => s.symbol === alert.symbol);
+              const stock = instruments.find(s => s.symbol === alert.symbol);
               const typeInfo = ALERT_TYPES.find(t => t.value === alert.type)!;
               const Icon = typeInfo.icon;
               return (

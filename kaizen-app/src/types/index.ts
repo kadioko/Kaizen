@@ -13,6 +13,9 @@ export interface Stock {
   sector?: string;
   assetClass?: 'stock' | 'prediction' | 'forex' | 'crypto';
   quoteUnit?: 'usd' | 'cents' | 'rate';
+  source?: 'static' | 'polymarket';
+  externalId?: string;
+  lastUpdated?: string;
 }
 
 export interface CandleData {

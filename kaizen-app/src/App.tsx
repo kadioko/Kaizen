@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
+import { MarketDataProvider } from './context/MarketDataContext';
 import { TradingProvider } from './context/TradingContext';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
@@ -16,23 +17,25 @@ import Pricing from './pages/Pricing';
 function App() {
   return (
     <ThemeProvider>
-      <TradingProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="trade" element={<PaperTrade />} />
-              <Route path="charts" element={<Charts />} />
-              <Route path="journal" element={<Journal />} />
-              <Route path="risk" element={<RiskScore />} />
-              <Route path="alerts" element={<Alerts />} />
-              <Route path="coach" element={<Coach />} />
-              <Route path="learn" element={<Learn />} />
-              <Route path="pricing" element={<Pricing />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </TradingProvider>
+      <MarketDataProvider>
+        <TradingProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="trade" element={<PaperTrade />} />
+                <Route path="charts" element={<Charts />} />
+                <Route path="journal" element={<Journal />} />
+                <Route path="risk" element={<RiskScore />} />
+                <Route path="alerts" element={<Alerts />} />
+                <Route path="coach" element={<Coach />} />
+                <Route path="learn" element={<Learn />} />
+                <Route path="pricing" element={<Pricing />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </TradingProvider>
+      </MarketDataProvider>
     </ThemeProvider>
   );
 }

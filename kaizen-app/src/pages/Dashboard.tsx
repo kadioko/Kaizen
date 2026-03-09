@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp, TrendingDown, DollarSign, BarChart3, Target, Activity } from 'lucide-react';
+import { useMarketData } from '../context/MarketDataContext';
 import { useTrading } from '../context/TradingContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatCurrency, formatPercent } from '../utils/helpers';
-import { STOCKS } from '../data/stocks';
 import { Stock } from '../types';
 import { XAxis, YAxis, ResponsiveContainer, Tooltip, AreaChart, Area } from 'recharts';
 import { getStockCandles } from '../data/stocks';
@@ -33,6 +33,7 @@ function StatCard({ title, value, subtitle, icon: Icon, trend }: {
 
 export default function Dashboard() {
   const { isDark } = useTheme();
+  const { instruments } = useMarketData();
   const { balance, positions, trades, getPerformanceMetrics } = useTrading();
   const metrics = getPerformanceMetrics();
 
@@ -40,7 +41,7 @@ export default function Dashboard() {
   const totalPnL = totalPortfolioValue - 100000;
   const totalPnLPercent = (totalPnL / 100000) * 100;
 
-  const portfolioHistory = getStockCandles('AAPL', 30).map((c, i) => ({
+  const portfolioHistory = getStockCandles('AAPL', 30, instruments.find(stock => stock.symbol === 'AAPL')).map((c, i) => ({
     date: c.date,
     value: 100000 + (totalPnL * (i / 30)) + (Math.random() - 0.5) * 1000,
   }));
@@ -142,7 +143,7 @@ export default function Dashboard() {
         <div className={`rounded-xl p-6 shadow-sm ${cardBg}`}>
           <h3 className="font-semibold mb-4">Market Overview</h3>
           <div className="space-y-2">
-            {STOCKS.slice(0, 8).map(stock => (
+            {instruments.slice(0, 8).map(stock => (
               <Link
                 key={stock.symbol}
                 to={`/charts?symbol=${stock.symbol}`}

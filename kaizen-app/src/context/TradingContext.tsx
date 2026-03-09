@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { Position, Trade, Alert, JournalEntry } from '../types';
+import { useMarketData } from './MarketDataContext';
 import { generateId } from '../utils/helpers';
-import { STOCKS } from '../data/stocks';
 
 interface TradingContextType {
   balance: number;
@@ -21,6 +21,7 @@ const INITIAL_BALANCE = 100000;
 const TradingContext = createContext<TradingContextType | null>(null);
 
 export function TradingProvider({ children }: { children: React.ReactNode }) {
+  const { getInstrument } = useMarketData();
   const [balance, setBalance] = useState(() => {
     const saved = localStorage.getItem('kaizen-balance');
     return saved ? parseFloat(saved) : INITIAL_BALANCE;
@@ -51,7 +52,7 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const executeTrade = useCallback((symbol: string, shares: number, type: 'buy' | 'sell', notes?: string, strategy?: string, emotion?: Trade['emotion']): boolean => {
-    const stock = STOCKS.find(s => s.symbol === symbol);
+    const stock = getInstrument(symbol);
     if (!stock) return false;
 
     const total = stock.price * shares;
@@ -121,7 +122,7 @@ export function TradingProvider({ children }: { children: React.ReactNode }) {
     saveState('kaizen-trades', newTrades);
 
     return true;
-  }, [balance, positions, trades, saveState]);
+  }, [balance, positions, trades, saveState, getInstrument]);
 
   const addAlert = useCallback((alert: Omit<Alert, 'id' | 'triggered' | 'createdAt'>) => {
     const newAlert: Alert = {

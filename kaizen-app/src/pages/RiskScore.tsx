@@ -1,13 +1,14 @@
 import React from 'react';
 import { useTrading } from '../context/TradingContext';
+import { useMarketData } from '../context/MarketDataContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatCurrency, formatPercent } from '../utils/helpers';
-import { STOCKS } from '../data/stocks';
 import { Shield, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, RadialBarChart, RadialBar, Tooltip } from 'recharts';
 
 export default function RiskScore() {
   const { isDark } = useTheme();
+  const { instruments } = useMarketData();
   const { balance, positions } = useTrading();
 
   const totalInvested = positions.reduce((sum, p) => sum + p.currentPrice * p.shares, 0);
@@ -25,8 +26,8 @@ export default function RiskScore() {
   const maxWeight = Math.max(...positionWeights.map(p => p.weight), 0);
   const concentrationScore = maxWeight > 25 ? 'high' : maxWeight > 15 ? 'moderate' : 'low';
 
-  const sectors = new Set(positions.map(p => STOCKS.find(s => s.symbol === p.symbol)?.sector || 'Other'));
-  const assetClasses = new Set(positions.map(p => STOCKS.find(s => s.symbol === p.symbol)?.assetClass || 'stock'));
+  const sectors = new Set(positions.map(p => instruments.find(s => s.symbol === p.symbol)?.sector || 'Other'));
+  const assetClasses = new Set(positions.map(p => instruments.find(s => s.symbol === p.symbol)?.assetClass || 'stock'));
   const diversificationScore = sectors.size >= 4 ? 'good' : sectors.size >= 2 ? 'moderate' : positions.length > 0 ? 'poor' : 'none';
 
   // Overall risk score (0-100, lower is better)

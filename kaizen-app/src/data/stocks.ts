@@ -31,6 +31,7 @@ function generateCandles(stock: Stock, days: number): CandleData[] {
   const volatility = stock.assetClass === 'crypto' ? 0.045 : stock.assetClass === 'prediction' ? 0.06 : stock.assetClass === 'forex' ? 0.008 : 0.02;
   const highWick = stock.assetClass === 'forex' ? 0.003 : stock.assetClass === 'prediction' ? 0.04 : 0.01;
   const lowWick = stock.assetClass === 'forex' ? 0.003 : stock.assetClass === 'prediction' ? 0.04 : 0.01;
+  const precision = stock.quoteUnit === 'rate' ? 4 : 2;
 
   for (let i = days; i >= 0; i--) {
     const date = new Date(now);
@@ -49,10 +50,10 @@ function generateCandles(stock: Stock, days: number): CandleData[] {
 
     candles.push({
       date: date.toISOString().split('T')[0],
-      open: parseFloat(open.toFixed(2)),
-      high: parseFloat(high.toFixed(2)),
-      low: parseFloat(low.toFixed(2)),
-      close: parseFloat(close.toFixed(2)),
+      open: parseFloat(open.toFixed(precision)),
+      high: parseFloat(high.toFixed(precision)),
+      low: parseFloat(low.toFixed(precision)),
+      close: parseFloat(close.toFixed(precision)),
       volume,
     });
 
@@ -64,10 +65,10 @@ function generateCandles(stock: Stock, days: number): CandleData[] {
 
 const candleCache: Record<string, CandleData[]> = {};
 
-export function getStockCandles(symbol: string, days = 180): CandleData[] {
-  const key = `${symbol}-${days}`;
+export function getStockCandles(symbol: string, days = 180, instrument?: Stock): CandleData[] {
+  const key = `${symbol}-${days}-${instrument?.price || 'default'}`;
   if (!candleCache[key]) {
-    const stock = STOCKS.find(s => s.symbol === symbol);
+    const stock = instrument || STOCKS.find(s => s.symbol === symbol);
     candleCache[key] = generateCandles(stock || { symbol: symbol, name: symbol, price: 100, change: 0, changePercent: 0, volume: 0, high: 100, low: 100, open: 100, previousClose: 100, assetClass: 'stock', quoteUnit: 'usd' }, days);
   }
   return candleCache[key];

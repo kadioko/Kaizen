@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTrading } from '../context/TradingContext';
+import { useMarketData } from '../context/MarketDataContext';
 import { useTheme } from '../context/ThemeContext';
-import { STOCKS } from '../data/stocks';
 import { formatCurrency, formatPercent } from '../utils/helpers';
 import { Search, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, AlertTriangle } from 'lucide-react';
 import { Stock } from '../types';
@@ -27,6 +27,7 @@ function getSearchPlaceholder(marketFilter: string) {
 export default function PaperTrade() {
   const { isDark } = useTheme();
   const { balance, positions, executeTrade } = useTrading();
+  const { instruments, isLoadingPolymarket, polymarketError } = useMarketData();
   const [search, setSearch] = useState('');
   const [marketFilter, setMarketFilter] = useState<'all' | 'stock' | 'prediction' | 'forex' | 'crypto'>('all');
   const [selectedSymbol, setSelectedSymbol] = useState('AAPL');
@@ -38,20 +39,21 @@ export default function PaperTrade() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState('');
 
-  const stock = STOCKS.find(s => s.symbol === selectedSymbol)!;
-  const filteredStocks = STOCKS.filter(s =>
+  const stock = instruments.find(s => s.symbol === selectedSymbol) || instruments[0];
+  const filteredStocks = instruments.filter(s =>
     (marketFilter === 'all' || s.assetClass === marketFilter) && (
       s.symbol.toLowerCase().includes(search.toLowerCase()) ||
       s.name.toLowerCase().includes(search.toLowerCase()) ||
       (s.sector || '').toLowerCase().includes(search.toLowerCase())
     )
   );
+  const selectedStock = stock || instruments[0];
 
   const sharesNum = parseInt(shares) || 0;
-  const orderTotal = stock.price * sharesNum;
+  const orderTotal = selectedStock.price * sharesNum;
   const position = positions.find(p => p.symbol === selectedSymbol);
 
-  const maxBuyShares = Math.floor(balance / stock.price);
+  const maxBuyShares = Math.floor(balance / selectedStock.price);
   const maxSellShares = position?.shares || 0;
   const riskPercent = (orderTotal / (balance + positions.reduce((s, p) => s + p.currentPrice * p.shares, 0))) * 100;
 
@@ -75,6 +77,10 @@ export default function PaperTrade() {
   const cardBg = isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-100';
   const inputBg = isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900';
 
+  if (!selectedStock) {
+    return null;
+  }
+
   return (
     <div>
       <div className="mb-8">
@@ -82,6 +88,11 @@ export default function PaperTrade() {
         <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           Practice with virtual ${formatCurrency(100000).replace('$', '')} — no real money at risk
         </p>
+        {(isLoadingPolymarket || polymarketError) && (
+          <p className={`mt-2 text-xs ${polymarketError ? 'text-amber-500' : isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+            {polymarketError ? `Live Polymarket feed unavailable: ${polymarketError}. Showing fallback prediction markets.` : 'Refreshing live Polymarket markets...'}
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -152,14 +163,14 @@ export default function PaperTrade() {
         <div className={`rounded-xl p-6 shadow-sm ${cardBg}`}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-bold">{stock.symbol}</h2>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{stock.name}</p>
-              <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{stock.sector} · {getSizeLabel(stock)}</p>
+              <h2 className="text-xl font-bold">{selectedStock.symbol}</h2>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{selectedStock.name}</p>
+              <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{selectedStock.sector} · {getSizeLabel(selectedStock)}</p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold">{formatQuote(stock, stock.price)}</p>
-              <p className={`text-sm ${stock.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                {stock.change >= 0 ? '+' : ''}{formatQuote(stock, Math.abs(stock.change))} ({formatPercent(stock.changePercent)})
+              <p className="text-2xl font-bold">{formatQuote(selectedStock, selectedStock.price)}</p>
+              <p className={`text-sm ${selectedStock.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                {selectedStock.change >= 0 ? '+' : ''}{formatQuote(selectedStock, Math.abs(selectedStock.change))} ({formatPercent(selectedStock.changePercent)})
               </p>
             </div>
           </div>
@@ -189,7 +200,7 @@ export default function PaperTrade() {
 
           <div className="space-y-4">
             <div>
-              <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{getSizeLabel(stock)}</label>
+              <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{getSizeLabel(selectedStock)}</label>
               <input
                 type="number"
                 value={shares}
@@ -200,7 +211,7 @@ export default function PaperTrade() {
               />
               <div className="flex justify-between mt-1">
                 <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                  Max: {orderType === 'buy' ? maxBuyShares : maxSellShares} {getSizeLabel(stock).toLowerCase()}
+                  Max: {orderType === 'buy' ? maxBuyShares : maxSellShares} {getSizeLabel(selectedStock).toLowerCase()}
                 </span>
                 <button
                   onClick={() => setShares(String(orderType === 'buy' ? maxBuyShares : maxSellShares))}
@@ -214,10 +225,10 @@ export default function PaperTrade() {
             <div className={`p-4 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
               <div className="flex justify-between text-sm mb-2">
                 <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Price</span>
-                <span>{formatQuote(stock, stock.price)}</span>
+                <span>{formatQuote(selectedStock, selectedStock.price)}</span>
               </div>
               <div className="flex justify-between text-sm mb-2">
-                <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>{getSizeLabel(stock)}</span>
+                <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>{getSizeLabel(selectedStock)}</span>
                 <span>{sharesNum}</span>
               </div>
               <div className="border-t border-inherit my-2 pt-2">
@@ -326,7 +337,7 @@ export default function PaperTrade() {
             ) : (
               <div className="space-y-3">
                 {positions.map(p => {
-                  const positionStock = STOCKS.find(s => s.symbol === p.symbol) || stock;
+                  const positionStock = instruments.find(s => s.symbol === p.symbol) || selectedStock;
                   const pnl = (p.currentPrice - p.entryPrice) * p.shares;
                   const pnlPct = ((p.currentPrice - p.entryPrice) / p.entryPrice) * 100;
                   return (

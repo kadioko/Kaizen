@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useMarketData } from '../context/MarketDataContext';
 import { useTheme } from '../context/ThemeContext';
-import { STOCKS, getStockCandles } from '../data/stocks';
+import { getStockCandles } from '../data/stocks';
 import { formatCurrency, formatPercent, calculateRSI, calculateSMA, calculateEMA, calculateMACD, calculateBollingerBands } from '../utils/helpers';
 import { Stock } from '../types';
 import {
@@ -19,13 +20,14 @@ type Indicator = 'sma20' | 'sma50' | 'sma200' | 'ema12' | 'ema26' | 'bollinger' 
 
 export default function Charts() {
   const { isDark } = useTheme();
+  const { instruments } = useMarketData();
   const [searchParams] = useSearchParams();
   const [symbol, setSymbol] = useState(searchParams.get('symbol') || 'AAPL');
   const [timeframe, setTimeframe] = useState(180);
   const [indicators, setIndicators] = useState<Set<Indicator>>(() => new Set<Indicator>(['sma20', 'volume']));
 
-  const stock = STOCKS.find(s => s.symbol === symbol)!;
-  const candles = useMemo(() => getStockCandles(symbol, timeframe), [symbol, timeframe]);
+  const stock = instruments.find(s => s.symbol === symbol) || instruments[0];
+  const candles = useMemo(() => getStockCandles(symbol, timeframe, stock), [symbol, timeframe, stock]);
 
   const closePrices = candles.map(c => c.close);
   const rsiValues = useMemo(() => calculateRSI(closePrices), [closePrices]);
@@ -83,6 +85,10 @@ export default function Charts() {
     { key: 'volume', label: 'Volume', color: '#6B7280' },
   ];
 
+  if (!stock) {
+    return null;
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -96,7 +102,7 @@ export default function Charts() {
             onChange={e => setSymbol(e.target.value)}
             className={`px-4 py-2 rounded-lg border text-sm font-medium outline-none ${isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300'}`}
           >
-            {STOCKS.map(s => (
+            {instruments.map(s => (
               <option key={s.symbol} value={s.symbol}>{s.symbol} — {s.name}</option>
             ))}
           </select>

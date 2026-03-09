@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTrading } from '../context/TradingContext';
 import { useMarketData } from '../context/MarketDataContext';
 import { useTheme } from '../context/ThemeContext';
@@ -24,6 +24,13 @@ function getSearchPlaceholder(marketFilter: string) {
   return `Search ${marketFilter}...`;
 }
 
+function getInstrumentCategory(stock: Stock): 'stock' | 'prediction' | 'forex' | 'crypto' {
+  if (stock.assetClass === 'prediction' || stock.source === 'polymarket' || stock.symbol.startsWith('PM-')) return 'prediction';
+  if (stock.assetClass === 'forex' || stock.sector === 'Forex') return 'forex';
+  if (stock.assetClass === 'crypto' || stock.sector === 'Crypto') return 'crypto';
+  return 'stock';
+}
+
 export default function PaperTrade() {
   const { isDark } = useTheme();
   const { balance, positions, executeTrade } = useTrading();
@@ -39,14 +46,23 @@ export default function PaperTrade() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState('');
 
-  const stock = instruments.find(s => s.symbol === selectedSymbol) || instruments[0];
-  const filteredStocks = instruments.filter(s =>
-    (marketFilter === 'all' || s.assetClass === marketFilter) && (
+  const filteredStocks = useMemo(() => instruments.filter(s =>
+    (marketFilter === 'all' || getInstrumentCategory(s) === marketFilter) && (
       s.symbol.toLowerCase().includes(search.toLowerCase()) ||
       s.name.toLowerCase().includes(search.toLowerCase()) ||
       (s.sector || '').toLowerCase().includes(search.toLowerCase())
     )
-  );
+  ), [instruments, marketFilter, search]);
+
+  useEffect(() => {
+    if (filteredStocks.length === 0) return;
+    const stillVisible = filteredStocks.some(s => s.symbol === selectedSymbol);
+    if (!stillVisible) {
+      setSelectedSymbol(filteredStocks[0].symbol);
+    }
+  }, [filteredStocks, selectedSymbol]);
+
+  const stock = filteredStocks.find(s => s.symbol === selectedSymbol) || instruments.find(s => s.symbol === selectedSymbol) || filteredStocks[0] || instruments[0];
   const selectedStock = stock || instruments[0];
 
   const sharesNum = parseInt(shares) || 0;

@@ -3,10 +3,17 @@ import { useSearchParams } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { STOCKS, getStockCandles } from '../data/stocks';
 import { formatCurrency, formatPercent, calculateRSI, calculateSMA, calculateEMA, calculateMACD, calculateBollingerBands } from '../utils/helpers';
+import { Stock } from '../types';
 import {
   ComposedChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, ReferenceLine
 } from 'recharts';
+
+function formatQuote(stock: Stock, value: number) {
+  if (stock.quoteUnit === 'cents') return `${Math.round(value * 100)}¢`;
+  if (stock.quoteUnit === 'rate') return value.toFixed(4);
+  return formatCurrency(value);
+}
 
 type Indicator = 'sma20' | 'sma50' | 'sma200' | 'ema12' | 'ema26' | 'bollinger' | 'rsi' | 'macd' | 'volume';
 
@@ -104,9 +111,9 @@ export default function Charts() {
               <span className={`ml-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{stock.name}</span>
             </div>
             <div className="text-right">
-              <span className="text-2xl font-bold">{formatCurrency(stock.price)}</span>
+              <span className="text-2xl font-bold">{formatQuote(stock, stock.price)}</span>
               <span className={`ml-2 text-sm ${stock.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                {stock.change >= 0 ? '+' : ''}{formatCurrency(stock.change)} ({formatPercent(stock.changePercent)})
+                {stock.change >= 0 ? '+' : ''}{formatQuote(stock, Math.abs(stock.change))} ({formatPercent(stock.changePercent)})
               </span>
             </div>
           </div>
@@ -148,7 +155,7 @@ export default function Charts() {
           <ComposedChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1f2937' : '#f0f0f0'} />
             <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} interval="preserveStartEnd" />
-            <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} />
+            <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={v => formatQuote(stock, Number(v))} />
             <Tooltip
               contentStyle={{
                 backgroundColor: isDark ? '#1f2937' : '#fff',
@@ -158,7 +165,7 @@ export default function Charts() {
                 color: isDark ? '#e5e7eb' : '#1f2937',
                 fontSize: '12px',
               }}
-              formatter={(value: any, name: any) => [typeof value === 'number' ? `$${value.toFixed(2)}` : value, name]}
+              formatter={(value: any, name: any) => [typeof value === 'number' ? formatQuote(stock, value) : value, name]}
             />
             <Line type="monotone" dataKey="close" stroke="#0F3A6B" strokeWidth={2} dot={false} name="Price" />
             {indicators.has('sma20') && <Line type="monotone" dataKey="sma20" stroke="#3B82F6" strokeWidth={1} dot={false} name="SMA 20" strokeDasharray="4 2" />}
@@ -227,14 +234,14 @@ export default function Charts() {
         <h3 className="font-semibold mb-4">Stock Details</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: 'Open', value: formatCurrency(stock.open) },
-            { label: 'High', value: formatCurrency(stock.high) },
-            { label: 'Low', value: formatCurrency(stock.low) },
-            { label: 'Prev Close', value: formatCurrency(stock.previousClose) },
+            { label: 'Open', value: formatQuote(stock, stock.open) },
+            { label: 'High', value: formatQuote(stock, stock.high) },
+            { label: 'Low', value: formatQuote(stock, stock.low) },
+            { label: 'Prev Close', value: formatQuote(stock, stock.previousClose) },
             { label: 'Volume', value: (stock.volume / 1000000).toFixed(1) + 'M' },
             { label: 'Market Cap', value: stock.marketCap ? `$${(stock.marketCap / 1000000000).toFixed(0)}B` : 'N/A' },
             { label: 'Sector', value: stock.sector || 'N/A' },
-            { label: 'Day Range', value: `${formatCurrency(stock.low)} - ${formatCurrency(stock.high)}` },
+            { label: 'Day Range', value: `${formatQuote(stock, stock.low)} - ${formatQuote(stock, stock.high)}` },
           ].map(item => (
             <div key={item.label}>
               <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{item.label}</p>

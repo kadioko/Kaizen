@@ -4,7 +4,13 @@ import { useTheme } from '../context/ThemeContext';
 import { STOCKS } from '../data/stocks';
 import { formatCurrency } from '../utils/helpers';
 import { Bell, Plus, Trash2, TrendingUp, TrendingDown, Activity, BarChart3 } from 'lucide-react';
-import { Alert } from '../types';
+import { Alert, Stock } from '../types';
+
+function formatQuote(stock: Stock | undefined, value: number) {
+  if (stock?.quoteUnit === 'cents') return `${Math.round(value * 100)}¢`;
+  if (stock?.quoteUnit === 'rate') return value.toFixed(4);
+  return formatCurrency(value);
+}
 
 const ALERT_TYPES: { value: Alert['type']; label: string; icon: React.ElementType }[] = [
   { value: 'price_above', label: 'Price Above', icon: TrendingUp },
@@ -61,7 +67,7 @@ export default function Alerts() {
           <h3 className="font-semibold mb-4">Create Alert</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Stock</label>
+              <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Market</label>
               <select
                 value={symbol}
                 onChange={e => setSymbol(e.target.value)}
@@ -151,8 +157,8 @@ export default function Alerts() {
                     <div>
                       <p className="font-semibold text-sm">{alert.symbol} — {typeInfo.label}</p>
                       <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                        Target: {alert.type.includes('price') ? formatCurrency(alert.value) : alert.value}
-                        {stock && ` | Current: ${formatCurrency(stock.price)}`}
+                        Target: {alert.type.includes('price') ? formatQuote(stock, alert.value) : alert.value}
+                        {stock && ` | Current: ${formatQuote(stock, stock.price)}`}
                       </p>
                     </div>
                   </div>

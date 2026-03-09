@@ -5,8 +5,15 @@ import { useTrading } from '../context/TradingContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatCurrency, formatPercent } from '../utils/helpers';
 import { STOCKS } from '../data/stocks';
+import { Stock } from '../types';
 import { XAxis, YAxis, ResponsiveContainer, Tooltip, AreaChart, Area } from 'recharts';
 import { getStockCandles } from '../data/stocks';
+
+function formatQuote(stock: Stock, value: number) {
+  if (stock.quoteUnit === 'cents') return `${Math.round(value * 100)}¢`;
+  if (stock.quoteUnit === 'rate') return value.toFixed(4);
+  return formatCurrency(value);
+}
 
 function StatCard({ title, value, subtitle, icon: Icon, trend }: {
   title: string; value: string; subtitle?: string; icon: React.ElementType; trend?: 'up' | 'down' | 'neutral';
@@ -151,7 +158,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium">{formatCurrency(stock.price)}</p>
+                  <p className="text-sm font-medium">{formatQuote(stock, stock.price)}</p>
                   <p className={`text-xs flex items-center gap-1 ${stock.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                     {stock.change >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                     {formatPercent(stock.changePercent)}
@@ -198,8 +205,8 @@ export default function Dashboard() {
           <div>
             <h4 className="font-semibold text-sm">Kaizen Tip</h4>
             <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              Start by paper trading with small position sizes. Focus on following your process, not on profits.
-              The best traders master risk management before they master stock picking.
+              Trade one market at a time until your edge is repeatable. Use prediction markets for probabilistic thinking,
+              forex for discipline around tight risk, and crypto for volatility management before scaling up size.
             </p>
           </div>
         </div>

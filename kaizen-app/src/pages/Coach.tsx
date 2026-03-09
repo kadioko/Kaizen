@@ -6,12 +6,15 @@ import { Brain, Send, Sparkles, AlertTriangle } from 'lucide-react';
 import { ChatMessage } from '../types';
 
 const COACHING_RESPONSES: Record<string, string> = {
-  default: "I'm your AI trading coach. I can help you analyze your trading patterns, review your portfolio, and suggest improvements. Ask me about:\n\n- Your portfolio risk\n- Position sizing\n- Trading psychology\n- Strategy review\n- Market analysis basics",
+  default: "I'm your AI trading coach. I can help you analyze your trading patterns, review your portfolio, and suggest improvements across stocks, prediction markets, forex, and crypto. Ask me about:\n\n- Your portfolio risk\n- Position sizing\n- Trading psychology\n- Strategy review\n- Prediction market process\n- Forex risk control\n- Crypto volatility management",
   risk: "Looking at your portfolio, here are my observations on risk:\n\n**Position Sizing**: Make sure no single position exceeds 5% of your portfolio. The 2% rule for risk per trade is a good starting point.\n\n**Diversification**: Consider spreading across different sectors. Tech-heavy portfolios can be volatile during sector rotations.\n\n**Cash Reserve**: Keep at least 20-30% cash to capitalize on opportunities and reduce drawdown risk.\n\nRemember: The goal isn't to maximize returns — it's to maximize risk-adjusted returns while surviving drawdowns.",
   psychology: "Common psychological traps I see in trading journals:\n\n1. **Revenge Trading**: After a loss, the urge to \"make it back\" leads to larger, riskier trades\n2. **Confirmation Bias**: Only seeking information that supports your existing positions\n3. **FOMO**: Chasing stocks that have already made significant moves\n4. **Anchoring**: Fixating on your entry price rather than current market conditions\n\n**My recommendation**: Before every trade, write down your thesis, entry, stop loss, and target. If you can't articulate these clearly, don't take the trade.",
   strategy: "Here's a framework for evaluating your strategy:\n\n1. **Define Your Edge**: What specific advantage do you have? If you can't articulate it, you may not have one.\n\n2. **Backtest**: Before trading real capital, test your strategy against historical data. Be honest about slippage and commissions.\n\n3. **Start Small**: Even with a paper trading account, practice discipline with realistic position sizes.\n\n4. **Review Weekly**: Track your win rate, average win vs. average loss, and profit factor.\n\n**Important truth**: Most retail trading strategies underperform simple buy-and-hold of index funds. Your strategy needs to overcome this hurdle to be worth the time and effort.",
   performance: "Let me analyze your trading performance:\n\n**Key metrics to track:**\n- Win rate (aim for >50% with proper R:R)\n- Average win vs. average loss (aim for 2:1 or better)\n- Profit factor (total gains / total losses, aim for >1.5)\n- Maximum drawdown (keep under 20%)\n- Sharpe ratio (risk-adjusted returns)\n\n**Common issues I see:**\n- Cutting winners too early\n- Letting losers run too long\n- Trading too frequently (overtrading)\n- Not following the trading plan\n\nTrack these metrics consistently and look for patterns in your best and worst trades.",
   journal: "Your trading journal is your most powerful improvement tool. Here's what to track:\n\n**Per Trade:**\n- Entry/exit prices and times\n- Position size and risk amount\n- Strategy/setup that triggered the trade\n- Emotional state (confident, fearful, greedy, neutral, FOMO)\n- Outcome and notes\n\n**Daily:**\n- Did you follow your trading plan?\n- What went well?\n- What could improve?\n- Rate your discipline (1-5)\n\n**Weekly:**\n- Review all trades\n- Calculate performance metrics\n- Identify patterns in wins and losses\n- Adjust strategy if needed\n\nThe traders who journal consistently improve faster than those who don't. Period.",
+  prediction: "Prediction markets reward **probabilistic thinking**, not hot takes. Treat every contract like a probability estimate and ask:\n\n- What does the current price imply?\n- What information is the crowd missing?\n- What catalyst changes the odds?\n\n**Best practice:** size small, avoid all-in conviction bets, and separate your personal opinion from the market-implied probability.",
+  forex: "In forex, your edge usually comes from **discipline and risk control**, not giant directional calls. Focus on:\n\n- Trading the most liquid pairs first\n- Respecting macro event risk\n- Using smaller risk because leverage magnifies mistakes\n- Avoiding overtrading around CPI, central bank, or NFP releases\n\nIf you're new, master EURUSD, GBPUSD, and USDJPY before adding more pairs.",
+  crypto: "Crypto can punish sloppy execution. Your advantage comes from **volatility management**:\n\n- Reduce size versus stocks\n- Plan exits before entry\n- Expect larger intraday swings\n- Avoid chasing vertical moves\n\nStart with BTC, ETH, and SOL only. If you cannot manage risk on the large caps, smaller tokens will magnify the problem.",
 };
 
 export default function Coach() {
@@ -37,7 +40,7 @@ export default function Coach() {
 
     if (lower.includes('portfolio') || lower.includes('position') || lower.includes('holding')) {
       if (positions.length === 0) {
-        return "You don't have any open positions yet. That's perfectly fine — there's no rush. When you're ready, start with small positions in stocks you've researched thoroughly. Use the paper trading simulator to practice without risk.";
+        return "You don't have any open positions yet. That's perfectly fine — there's no rush. When you're ready, start with small positions in one market you understand well, then expand to prediction markets, forex, or crypto only after your process is consistent.";
       }
       const posDetails = positions.map(p => {
         const pnl = ((p.currentPrice - p.entryPrice) / p.entryPrice * 100);
@@ -48,6 +51,9 @@ export default function Coach() {
 
     if (lower.includes('risk')) return COACHING_RESPONSES.risk;
     if (lower.includes('psycholog') || lower.includes('emotion') || lower.includes('fear') || lower.includes('greed')) return COACHING_RESPONSES.psychology;
+    if (lower.includes('prediction') || lower.includes('polymarket') || lower.includes('probability')) return COACHING_RESPONSES.prediction;
+    if (lower.includes('forex') || lower.includes('eurusd') || lower.includes('gbpusd') || lower.includes('usdjpy') || lower.includes('fx')) return COACHING_RESPONSES.forex;
+    if (lower.includes('crypto') || lower.includes('bitcoin') || lower.includes('btc') || lower.includes('ethereum') || lower.includes('eth') || lower.includes('solana') || lower.includes('sol')) return COACHING_RESPONSES.crypto;
     if (lower.includes('strateg') || lower.includes('edge') || lower.includes('approach')) return COACHING_RESPONSES.strategy;
     if (lower.includes('perform') || lower.includes('win rate') || lower.includes('metric')) {
       if (trades.length === 0) {
@@ -85,9 +91,11 @@ export default function Coach() {
   const quickPrompts = [
     'Analyze my portfolio risk',
     'Review my performance',
+    'How should I trade prediction markets?',
+    'How do I manage forex risk?',
+    'Give me crypto risk tips',
     'Help with trading psychology',
     'Suggest a strategy framework',
-    'How should I journal trades?',
   ];
 
   return (

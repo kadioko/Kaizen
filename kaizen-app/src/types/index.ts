@@ -11,6 +11,8 @@ export interface Stock {
   previousClose: number;
   marketCap?: number;
   sector?: string;
+  assetClass?: 'stock' | 'prediction' | 'forex' | 'crypto';
+  quoteUnit?: 'usd' | 'cents' | 'rate';
 }
 
 export interface CandleData {

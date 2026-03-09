@@ -2,6 +2,7 @@ import React from 'react';
 import { useTrading } from '../context/TradingContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatCurrency, formatPercent } from '../utils/helpers';
+import { STOCKS } from '../data/stocks';
 import { Shield, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, RadialBarChart, RadialBar, Tooltip } from 'recharts';
 
@@ -24,11 +25,8 @@ export default function RiskScore() {
   const maxWeight = Math.max(...positionWeights.map(p => p.weight), 0);
   const concentrationScore = maxWeight > 25 ? 'high' : maxWeight > 15 ? 'moderate' : 'low';
 
-  // Diversification - count unique sectors
-  const sectors = new Set(positions.map(p => {
-    const stockData: Record<string, string> = { AAPL: 'Tech', MSFT: 'Tech', GOOGL: 'Tech', AMZN: 'Consumer', NVDA: 'Tech', TSLA: 'Consumer', META: 'Tech', JPM: 'Finance', V: 'Finance', JNJ: 'Health', WMT: 'Consumer', XOM: 'Energy' };
-    return stockData[p.symbol] || 'Other';
-  }));
+  const sectors = new Set(positions.map(p => STOCKS.find(s => s.symbol === p.symbol)?.sector || 'Other'));
+  const assetClasses = new Set(positions.map(p => STOCKS.find(s => s.symbol === p.symbol)?.assetClass || 'stock'));
   const diversificationScore = sectors.size >= 4 ? 'good' : sectors.size >= 2 ? 'moderate' : positions.length > 0 ? 'poor' : 'none';
 
   // Overall risk score (0-100, lower is better)
@@ -47,6 +45,7 @@ export default function RiskScore() {
   if (cashPercent < 20) recommendations.push('Consider holding at least 20% cash to manage risk and capitalize on opportunities.');
   if (maxWeight > 20) recommendations.push(`Your largest position is ${maxWeight.toFixed(1)}% of your portfolio. Consider rebalancing to under 20%.`);
   if (sectors.size < 3 && positions.length > 2) recommendations.push('Your portfolio lacks sector diversification. Consider adding exposure to different sectors.');
+  if (assetClasses.size === 1 && positions.length > 1) recommendations.push('You are concentrated in a single market type. Blending stocks, forex, crypto, or prediction markets can improve diversification when risk-managed well.');
   if (positions.length === 0) recommendations.push('You have no positions yet. Start with small, diversified positions to learn.');
   if (positions.length === 1) recommendations.push('Having only one position creates concentration risk. Consider diversifying across multiple stocks.');
   if (recommendations.length === 0) recommendations.push('Your portfolio risk profile looks reasonable. Keep monitoring and rebalancing as needed.');
@@ -141,6 +140,10 @@ export default function RiskScore() {
             <div className="flex justify-between items-center">
               <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Sectors</span>
               <span className="font-semibold">{sectors.size || 0}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Market Types</span>
+              <span className="font-semibold">{assetClasses.size || 0}</span>
             </div>
           </div>
         </div>

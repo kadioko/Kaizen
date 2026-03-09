@@ -8,10 +8,10 @@ export default function Layout() {
 
   return (
     <div className={`${isDark ? 'dark' : ''}`}>
-      <div style={{ display: 'flex', height: '100vh' }}>
+      <div className="flex h-screen overflow-hidden">
         <Sidebar />
-        <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }} className={`${isDark ? 'bg-gray-950 text-gray-100' : 'bg-offwhite text-gray-900'}`}>
-          <div style={{ padding: '32px', maxWidth: '1280px', margin: '0 auto' }}>
+        <main className={`flex-1 overflow-y-auto overflow-x-hidden ${isDark ? 'bg-gray-950 text-gray-100' : 'bg-offwhite text-gray-900'}`}>
+          <div className="mx-auto max-w-7xl p-8">
             <Outlet />
           </div>
         </main>

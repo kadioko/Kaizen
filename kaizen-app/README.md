@@ -1,46 +1,152 @@
-# Getting Started with Create React App
+# Kaizen
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Kaizen is a multi-market paper trading platform designed to help you build trading skill without risking real money. The app combines portfolio simulation, technical charting, risk review, alert tracking, journaling, and an AI-style coaching experience in a single dashboard.
+
+It supports traditional equities, cryptocurrencies, forex pairs, and prediction markets. Prediction markets are powered by a live Polymarket feed with a serverless proxy and static fallback support so the app remains usable if the live feed is unavailable.
+
+## Live App
+
+- **Production**: `https://kaizen-app-opal.vercel.app`
+
+## Core Features
+
+- **Paper Trading**
+  - simulate buy and sell orders with virtual capital
+  - trade across stocks, prediction markets, forex, and crypto
+  - filter instruments by market type
+
+- **Live Polymarket Integration**
+  - fetches active Polymarket contracts from the Gamma API
+  - uses a serverless proxy endpoint at `/api/polymarket`
+  - falls back to static prediction markets if the live feed fails
+
+- **Technical Charts**
+  - view candles and indicator overlays
+  - supports SMA, EMA, RSI, MACD, Bollinger Bands, and volume
+
+- **Risk Score**
+  - reviews concentration, cash allocation, and diversification
+  - accounts for sector and asset-class exposure
+
+- **Alerts**
+  - create price and indicator-based alerts for supported markets
+
+- **Trade Journal**
+  - record notes, strategy context, and emotional state alongside trades
+
+- **Coach Experience**
+  - provides guidance and insights around current positions and market behavior
+
+- **Responsive UI**
+  - optimized for desktop and mobile layouts
+  - includes a mobile slide-in navigation menu
+
+## Supported Markets
+
+- **Stocks**
+  - major US equities used throughout the dashboard and paper trading flows
+
+- **Prediction Markets**
+  - live Polymarket contracts
+  - static fallback markets when the live feed is unavailable
+
+- **Forex**
+  - 10 major pairs including `EURUSD`, `GBPUSD`, `USDJPY`, `USDCHF`, `AUDUSD`, `USDCAD`, `NZDUSD`, `EURGBP`, `EURJPY`, and `GBPJPY`
+
+- **Crypto**
+  - `BTCUSD`, `ETHUSD`, and `SOLUSD`
+
+## Tech Stack
+
+- **Frontend**: React 19 + TypeScript
+- **Routing**: React Router
+- **Styling**: Tailwind CSS
+- **Charts**: Recharts
+- **Icons**: Lucide React
+- **Build Tooling**: Create React App
+- **Deployment**: Vercel
+- **Serverless API**: Vercel function for Polymarket proxying
+
+## Project Structure
+
+```text
+src/
+  components/
+    layout/
+  context/
+    MarketDataContext.tsx
+    ThemeContext.tsx
+    TradingContext.tsx
+  data/
+    stocks.ts
+  pages/
+    Dashboard.tsx
+    PaperTrade.tsx
+    Charts.tsx
+    Alerts.tsx
+    RiskScore.tsx
+    Journal.tsx
+    Coach.tsx
+api/
+  polymarket.js
+```
+
+## Local Development
+
+### Prerequisites
+
+- **Node.js** 18+
+- **npm**
+
+### Install
+
+```bash
+npm install
+```
+
+### Start the app
+
+```bash
+npm start
+```
+
+The app will run at `http://localhost:3000`.
 
 ## Available Scripts
 
-In the project directory, you can run:
-
 ### `npm start`
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
-
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Runs the app in development mode.
 
 ### `npm run build`
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Creates a production build in the `build` folder.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### `npm test`
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Runs the test runner in watch mode.
 
-### `npm run eject`
+## Live Market Data Notes
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+- The app requests Polymarket data through `/api/polymarket` in production.
+- If the proxy or upstream request fails, the UI falls back to static prediction market instruments.
+- Market data refreshes automatically on an interval inside `MarketDataContext`.
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Deployment
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+The app is configured for Vercel deployment.
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+- **SPA routing** is handled in `vercel.json`
+- **Polymarket proxy** is handled by `api/polymarket.js`
 
-## Learn More
+To deploy manually with the Vercel CLI:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+npx vercel --prod
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Notes
+
+- This is a paper trading product only.
+- No live brokerage integration is included.
+- No real money is placed at risk inside the app.

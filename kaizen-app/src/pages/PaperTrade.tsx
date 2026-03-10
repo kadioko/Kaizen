@@ -37,6 +37,14 @@ export default function PaperTrade() {
     }))
   ), [instruments]);
 
+  const categoryLists = useMemo(() => ({
+    all: categorizedInstruments.map(({ instrument }) => instrument),
+    stock: categorizedInstruments.filter(({ category }) => category === 'stock').map(({ instrument }) => instrument),
+    prediction: categorizedInstruments.filter(({ category }) => category === 'prediction').map(({ instrument }) => instrument),
+    forex: categorizedInstruments.filter(({ category }) => category === 'forex').map(({ instrument }) => instrument),
+    crypto: categorizedInstruments.filter(({ category }) => category === 'crypto').map(({ instrument }) => instrument),
+  }), [categorizedInstruments]);
+
   const filteredStocks = useMemo(() => categorizedInstruments.filter(({ instrument, category }) =>
     (marketFilter === 'all' || category === marketFilter) && (
       instrument.symbol.toLowerCase().includes(search.toLowerCase()) ||
@@ -44,6 +52,14 @@ export default function PaperTrade() {
       (instrument.sector || '').toLowerCase().includes(search.toLowerCase())
     )
   ).map(({ instrument }) => instrument), [categorizedInstruments, marketFilter, search]);
+
+  const handleMarketFilterChange = (nextFilter: 'all' | 'stock' | 'prediction' | 'forex' | 'crypto') => {
+    setMarketFilter(nextFilter);
+    const nextCategoryStocks = categoryLists[nextFilter];
+    if (nextCategoryStocks.length > 0) {
+      setSelectedSymbol(nextCategoryStocks[0].symbol);
+    }
+  };
 
   useEffect(() => {
     if (filteredStocks.length === 0) return;
@@ -152,7 +168,7 @@ export default function PaperTrade() {
               ] as const).map(([value, label]) => (
                 <Button
                   key={value}
-                  onClick={() => setMarketFilter(value)}
+                  onClick={() => handleMarketFilterChange(value)}
                   variant={marketFilter === value ? 'default' : 'secondary'}
                   size="sm"
                   className="rounded-full"
@@ -173,7 +189,7 @@ export default function PaperTrade() {
               />
             </div>
           </CardHeader>
-          <CardContent className="max-h-[620px] space-y-3 overflow-y-auto pt-0">
+          <CardContent key={marketFilter} className="max-h-[620px] space-y-3 overflow-y-auto pt-0">
             {filteredStocks.map(s => (
               <button
                 key={s.symbol}

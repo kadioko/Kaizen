@@ -6,6 +6,32 @@ export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 }
 
+export function getInstrumentCategory(stock: {
+  assetClass?: 'stock' | 'prediction' | 'forex' | 'crypto';
+  source?: 'static' | 'polymarket';
+  sector?: string;
+  symbol: string;
+}): 'stock' | 'prediction' | 'forex' | 'crypto' {
+  if (stock.assetClass === 'prediction' || stock.source === 'polymarket' || stock.symbol.startsWith('PM-') || stock.sector === 'Prediction Markets') return 'prediction';
+  if (stock.assetClass === 'forex' || stock.sector === 'Forex') return 'forex';
+  if (stock.assetClass === 'crypto' || stock.sector === 'Crypto') return 'crypto';
+  return 'stock';
+}
+
+export function getSizeLabel(stock: { assetClass?: 'stock' | 'prediction' | 'forex' | 'crypto'; source?: 'static' | 'polymarket'; sector?: string; symbol: string; }) {
+  const category = getInstrumentCategory(stock);
+  if (category === 'forex') return 'Units';
+  if (category === 'crypto') return 'Coins';
+  if (category === 'prediction') return 'Contracts';
+  return 'Shares';
+}
+
+export function formatInstrumentQuote(stock: { quoteUnit?: 'usd' | 'cents' | 'rate' }, value: number): string {
+  if (stock.quoteUnit === 'cents') return `${Math.round(value * 100)}¢`;
+  if (stock.quoteUnit === 'rate') return value.toFixed(4);
+  return formatCurrency(value);
+}
+
 export function formatNumber(value: number, decimals = 2): string {
   return new Intl.NumberFormat('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(value);
 }

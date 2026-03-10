@@ -4,6 +4,10 @@ import { useTheme } from '../context/ThemeContext';
 import { formatCurrency, formatPercent } from '../utils/helpers';
 import { Brain, Send, Sparkles, AlertTriangle } from 'lucide-react';
 import { ChatMessage } from '../types';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Card, CardContent } from '../components/ui/card';
+import { Input } from '../components/ui/input';
 
 const COACHING_RESPONSES: Record<string, string> = {
   default: "I'm your AI trading coach. I can help you analyze your trading patterns, review your portfolio, and suggest improvements across stocks, prediction markets, forex, and crypto. Ask me about:\n\n- Your portfolio risk\n- Position sizing\n- Trading psychology\n- Strategy review\n- Prediction market process\n- Forex risk control\n- Crypto volatility management",
@@ -29,9 +33,6 @@ export default function Coach() {
     },
   ]);
   const [input, setInput] = useState('');
-
-  const cardBg = isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-100';
-  const inputBg = isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900';
 
   const getResponse = (userMessage: string): string => {
     const lower = userMessage.toLowerCase();
@@ -109,13 +110,12 @@ export default function Coach() {
         </p>
       </div>
 
-      <div className={`rounded-xl shadow-sm ${cardBg}`}>
+      <Card>
+        <CardContent className="p-0">
         <div className={`p-4 border-b flex items-center gap-2 ${isDark ? 'border-gray-800' : 'border-gray-100'}`}>
           <Sparkles size={16} className="text-gold-400" />
           <span className="text-sm font-medium">Trading Coach</span>
-          <span className={`text-xs px-2 py-0.5 rounded-full ${isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
-            Demo Mode
-          </span>
+          <Badge variant="outline">Demo Mode</Badge>
         </div>
 
         <div className="h-[500px] overflow-y-auto p-6 space-y-6">
@@ -140,38 +140,39 @@ export default function Coach() {
         <div className={`p-4 border-t ${isDark ? 'border-gray-800' : 'border-gray-100'}`}>
           <div className="flex flex-wrap gap-2 mb-3">
             {quickPrompts.map(prompt => (
-              <button
+              <Button
                 key={prompt}
                 onClick={() => { setInput(prompt); }}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                  isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-300' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                variant="secondary"
+                size="sm"
+                className="rounded-full"
               >
                 {prompt}
-              </button>
+              </Button>
             ))}
           </div>
           <div className="flex gap-2">
-            <input
+            <Input
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
               placeholder="Ask your trading coach..."
-              className={`flex-1 px-4 py-3 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-navy-500 ${inputBg}`}
+              className="h-12 flex-1"
             />
-            <button
+            <Button
               onClick={handleSend}
               disabled={!input.trim()}
-              className="px-4 py-3 bg-navy-800 text-white rounded-lg hover:bg-navy-700 transition-colors disabled:opacity-50"
+              className="h-12 px-4"
             >
               <Send size={18} />
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className={`mt-4 flex items-start gap-2 p-4 rounded-lg ${isDark ? 'bg-amber-900/20 border border-amber-800/30' : 'bg-amber-50 border border-amber-100'}`}>
+      <div className={`mt-4 flex items-start gap-2 rounded-lg border p-4 ${isDark ? 'bg-amber-900/20 border-amber-800/30' : 'bg-amber-50 border-amber-100'}`}>
         <AlertTriangle size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
         <p className={`text-xs ${isDark ? 'text-amber-200/70' : 'text-amber-700'}`}>
           This is a demo coach with pre-built responses. The full version uses Claude AI for personalized,

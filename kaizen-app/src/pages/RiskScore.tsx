@@ -4,6 +4,8 @@ import { useMarketData } from '../context/MarketDataContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatCurrency, formatPercent } from '../utils/helpers';
 import { Shield, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { Badge } from '../components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, RadialBarChart, RadialBar, Tooltip } from 'recharts';
 
 export default function RiskScore() {
@@ -51,8 +53,6 @@ export default function RiskScore() {
   if (positions.length === 1) recommendations.push('Having only one position creates concentration risk. Consider diversifying across multiple stocks.');
   if (recommendations.length === 0) recommendations.push('Your portfolio risk profile looks reasonable. Keep monitoring and rebalancing as needed.');
 
-  const cardBg = isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-100';
-
   const pieData = [
     { name: 'Cash', value: balance },
     ...positionWeights.map(p => ({ name: p.symbol, value: p.value })),
@@ -65,13 +65,16 @@ export default function RiskScore() {
     <div>
       <div className="mb-8">
         <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold">Risk Analysis</h1>
-        <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Understand and manage your portfolio risk</p>
+        <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Understand concentration, diversification, cash exposure, and overall portfolio resilience.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* Risk Score Gauge */}
-        <div className={`rounded-xl p-6 shadow-sm text-center ${cardBg}`}>
-          <h3 className="font-semibold mb-2">Overall Risk Score</h3>
+        <Card className="text-center">
+          <CardHeader>
+            <CardTitle>Overall Risk Score</CardTitle>
+            <CardDescription>A quick view of the portfolio’s current risk posture.</CardDescription>
+          </CardHeader>
+          <CardContent>
           <ResponsiveContainer width="100%" height={180}>
             <RadialBarChart innerRadius="60%" outerRadius="100%" data={gaugeData} startAngle={180} endAngle={0} cx="50%" cy="80%">
               <RadialBar dataKey="value" cornerRadius={10} fill={riskColor} background={{ fill: isDark ? '#1f2937' : '#f3f4f6' }} />
@@ -81,11 +84,15 @@ export default function RiskScore() {
             <p className="text-3xl font-bold" style={{ color: riskColor }}>{riskScore}</p>
             <p className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{riskLevel} Risk</p>
           </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Portfolio Allocation */}
-        <div className={`rounded-xl p-6 shadow-sm ${cardBg}`}>
-          <h3 className="font-semibold mb-4">Portfolio Allocation</h3>
+        <Card>
+          <CardHeader>
+            <CardTitle>Portfolio Allocation</CardTitle>
+            <CardDescription>See how cash and positions are distributed across the account.</CardDescription>
+          </CardHeader>
+          <CardContent>
           {positions.length === 0 ? (
             <div className="flex items-center justify-center h-40">
               <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>100% Cash — Start trading to see allocation</p>
@@ -100,11 +107,15 @@ export default function RiskScore() {
               </PieChart>
             </ResponsiveContainer>
           )}
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Key Metrics */}
-        <div className={`rounded-xl p-6 shadow-sm ${cardBg}`}>
-          <h3 className="font-semibold mb-4">Key Metrics</h3>
+        <Card>
+          <CardHeader>
+            <CardTitle>Key Metrics</CardTitle>
+            <CardDescription>The core signals driving the current risk score.</CardDescription>
+          </CardHeader>
+          <CardContent>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Portfolio Value</span>
@@ -120,23 +131,23 @@ export default function RiskScore() {
             </div>
             <div className="flex justify-between items-center">
               <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Concentration</span>
-              <span className={`text-xs px-2 py-1 rounded font-medium ${
+              <Badge className={`${
                 concentrationScore === 'low' ? 'bg-emerald-100 text-emerald-700' :
                 concentrationScore === 'moderate' ? 'bg-amber-100 text-amber-700' :
                 'bg-red-100 text-red-700'
               }`}>
                 {concentrationScore.charAt(0).toUpperCase() + concentrationScore.slice(1)}
-              </span>
+              </Badge>
             </div>
             <div className="flex justify-between items-center">
               <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Diversification</span>
-              <span className={`text-xs px-2 py-1 rounded font-medium ${
+              <Badge className={`${
                 diversificationScore === 'good' ? 'bg-emerald-100 text-emerald-700' :
                 diversificationScore === 'moderate' ? 'bg-amber-100 text-amber-700' :
                 'bg-red-100 text-red-700'
               }`}>
                 {diversificationScore.charAt(0).toUpperCase() + diversificationScore.slice(1)}
-              </span>
+              </Badge>
             </div>
             <div className="flex justify-between items-center">
               <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Sectors</span>
@@ -147,28 +158,37 @@ export default function RiskScore() {
               <span className="font-semibold">{assetClasses.size || 0}</span>
             </div>
           </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Recommendations */}
-      <div className={`rounded-xl p-6 shadow-sm mb-6 ${cardBg}`}>
-        <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <Shield size={18} className="text-gold-400" /> Recommendations
-        </h3>
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Shield size={18} className="text-gold-400" />
+            <CardTitle>Recommendations</CardTitle>
+          </div>
+          <CardDescription>Actionable ways to improve resilience and reduce unnecessary portfolio stress.</CardDescription>
+        </CardHeader>
+        <CardContent>
         <div className="space-y-3">
           {recommendations.map((rec, i) => (
-            <div key={i} className={`flex items-start gap-3 p-4 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+            <div key={i} className={`flex items-start gap-3 rounded-xl border p-4 ${isDark ? 'border-gray-800 bg-gray-800/60' : 'border-gray-100 bg-gray-50'}`}>
               <Info size={16} className="text-navy-600 mt-0.5 flex-shrink-0" />
               <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{rec}</p>
             </div>
           ))}
         </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Position Details */}
       {positionWeights.length > 0 && (
-        <div className={`rounded-xl p-6 shadow-sm ${cardBg}`}>
-          <h3 className="font-semibold mb-4">Position Risk Details</h3>
+        <Card>
+          <CardHeader>
+            <CardTitle>Position Risk Details</CardTitle>
+            <CardDescription>Inspect the positions contributing most to concentration and drawdown sensitivity.</CardDescription>
+          </CardHeader>
+          <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -201,10 +221,11 @@ export default function RiskScore() {
               </tbody>
             </table>
           </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
-      <div className={`mt-6 p-4 rounded-lg text-xs ${isDark ? 'bg-gray-900/50 text-gray-500' : 'bg-gray-100 text-gray-400'}`}>
+      <div className={`mt-6 rounded-xl border p-4 text-xs ${isDark ? 'border-gray-800 bg-gray-900/50 text-gray-500' : 'border-gray-100 bg-gray-100 text-gray-400'}`}>
         Risk scores are educational estimates based on portfolio composition. They are not financial advice.
         Always consult a qualified financial advisor for investment decisions.
       </div>

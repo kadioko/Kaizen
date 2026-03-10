@@ -3,6 +3,9 @@ import { useTrading } from '../context/TradingContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatCurrency, formatDate } from '../utils/helpers';
 import { BookOpen, Plus, Star, CheckCircle, XCircle } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 export default function Journal() {
@@ -15,9 +18,6 @@ export default function Journal() {
   const [followedPlan, setFollowedPlan] = useState(true);
 
   const metrics = getPerformanceMetrics();
-
-  const cardBg = isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-100';
-  const inputBg = isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900';
 
   const handleSubmit = () => {
     addJournalEntry({
@@ -55,22 +55,25 @@ export default function Journal() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold">Trade Journal</h1>
-          <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Track, analyze, and learn from every trade</p>
+          <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Capture lessons, emotional patterns, and execution quality from every session.</p>
         </div>
-        <button
+        <Button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-navy-800 text-white rounded-lg text-sm font-medium hover:bg-navy-700 transition-colors"
         >
           <Plus size={16} /> New Entry
-        </button>
+        </Button>
       </div>
 
       {showForm && (
-        <div className={`rounded-xl p-6 shadow-sm mb-6 ${cardBg}`}>
-          <h3 className="font-semibold mb-4">New Journal Entry</h3>
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>New Journal Entry</CardTitle>
+            <CardDescription>Document the session, rate your discipline, and preserve lessons while they are still fresh.</CardDescription>
+          </CardHeader>
+          <CardContent>
           <div className="space-y-4">
             <div>
               <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Daily Notes</label>
@@ -79,7 +82,7 @@ export default function Journal() {
                 onChange={e => setNotes(e.target.value)}
                 placeholder="What happened in the market today? How did your trades go?"
                 rows={3}
-                className={`mt-1 w-full px-3 py-2 rounded-lg border text-sm outline-none resize-none ${inputBg}`}
+                className={`mt-1 w-full resize-none rounded-lg border px-3 py-2 text-sm outline-none ${isDark ? 'border-gray-700 bg-gray-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
               />
             </div>
             <div>
@@ -89,15 +92,15 @@ export default function Journal() {
                 onChange={e => setLessons(e.target.value)}
                 placeholder="What did you learn today? What would you do differently?"
                 rows={2}
-                className={`mt-1 w-full px-3 py-2 rounded-lg border text-sm outline-none resize-none ${inputBg}`}
+                className={`mt-1 w-full resize-none rounded-lg border px-3 py-2 text-sm outline-none ${isDark ? 'border-gray-700 bg-gray-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
               />
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex flex-col gap-6 md:flex-row md:items-center">
               <div>
                 <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Day Rating</label>
                 <div className="flex gap-1 mt-1">
                   {([1, 2, 3, 4, 5] as const).map(r => (
-                    <button key={r} onClick={() => setRating(r)}>
+                    <button key={r} type="button" onClick={() => setRating(r)}>
                       <Star size={20} className={r <= rating ? 'text-gold-400 fill-gold-400' : isDark ? 'text-gray-600' : 'text-gray-300'} />
                     </button>
                   ))}
@@ -106,57 +109,71 @@ export default function Journal() {
               <div>
                 <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Followed Plan?</label>
                 <div className="flex gap-2 mt-1">
-                  <button
+                  <Button
                     onClick={() => setFollowedPlan(true)}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium ${followedPlan ? 'bg-emerald-100 text-emerald-700' : isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'}`}
+                    variant={followedPlan ? 'secondary' : 'outline'}
+                    size="sm"
+                    className={followedPlan ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100' : ''}
                   >
                     <CheckCircle size={14} /> Yes
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => setFollowedPlan(false)}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium ${!followedPlan ? 'bg-red-100 text-red-700' : isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'}`}
+                    variant={!followedPlan ? 'secondary' : 'outline'}
+                    size="sm"
+                    className={!followedPlan ? 'bg-red-100 text-red-700 hover:bg-red-100' : ''}
                   >
                     <XCircle size={14} /> No
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
-            <button
+            <Button
               onClick={handleSubmit}
-              className="px-6 py-2 bg-navy-800 text-white rounded-lg text-sm font-medium hover:bg-navy-700 transition-colors"
             >
               Save Entry
-            </button>
+            </Button>
           </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Performance Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className={`rounded-xl p-5 shadow-sm ${cardBg}`}>
+        <Card>
+          <CardContent className="p-5">
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Total Trades</p>
           <p className="text-2xl font-bold mt-1">{metrics.totalTrades}</p>
-        </div>
-        <div className={`rounded-xl p-5 shadow-sm ${cardBg}`}>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Win Rate</p>
           <p className="text-2xl font-bold mt-1">{metrics.winRate.toFixed(1)}%</p>
-        </div>
-        <div className={`rounded-xl p-5 shadow-sm ${cardBg}`}>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Total Return</p>
           <p className={`text-2xl font-bold mt-1 ${metrics.totalReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
             {formatCurrency(metrics.totalReturn)}
           </p>
-        </div>
-        <div className={`rounded-xl p-5 shadow-sm ${cardBg}`}>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Journal Entries</p>
           <p className="text-2xl font-bold mt-1">{journalEntries.length}</p>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Emotion Distribution */}
-        <div className={`rounded-xl p-6 shadow-sm ${cardBg}`}>
-          <h3 className="font-semibold mb-4">Trading Emotions</h3>
+        <Card>
+          <CardHeader>
+            <CardTitle>Trading Emotions</CardTitle>
+            <CardDescription>See which emotional states show up most often in your execution flow.</CardDescription>
+          </CardHeader>
+          <CardContent>
           {emotionData.length === 0 ? (
             <p className={`text-sm text-center py-8 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Make trades to see emotion data</p>
           ) : (
@@ -169,11 +186,15 @@ export default function Journal() {
               </PieChart>
             </ResponsiveContainer>
           )}
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Strategy Distribution */}
-        <div className={`rounded-xl p-6 shadow-sm ${cardBg}`}>
-          <h3 className="font-semibold mb-4">Strategies Used</h3>
+        <Card>
+          <CardHeader>
+            <CardTitle>Strategies Used</CardTitle>
+            <CardDescription>Review which setups you actually trade most often, not just the ones you intend to trade.</CardDescription>
+          </CardHeader>
+          <CardContent>
           {strategyData.length === 0 ? (
             <p className={`text-sm text-center py-8 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Tag trades with strategies to see data</p>
           ) : (
@@ -187,12 +208,16 @@ export default function Journal() {
               </BarChart>
             </ResponsiveContainer>
           )}
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Trade History */}
-      <div className={`rounded-xl p-6 shadow-sm ${cardBg}`}>
-        <h3 className="font-semibold mb-4">Trade History</h3>
+      <Card>
+        <CardHeader>
+          <CardTitle>Trade History</CardTitle>
+          <CardDescription>Audit your recent executions, strategy tags, and emotional state side by side.</CardDescription>
+        </CardHeader>
+        <CardContent>
         {trades.length === 0 ? (
           <p className={`text-sm text-center py-8 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>No trades yet. Start paper trading to build your journal.</p>
         ) : (
@@ -231,14 +256,18 @@ export default function Journal() {
             </table>
           </div>
         )}
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Journal Entries */}
       {journalEntries.length > 0 && (
         <div className="mt-6 space-y-4">
-          <h3 className="font-semibold">Journal Entries</h3>
+          <div>
+            <h3 className="font-semibold">Journal Entries</h3>
+            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Revisit past sessions to reinforce what worked and what needs adjustment.</p>
+          </div>
           {journalEntries.map(entry => (
-            <div key={entry.id} className={`rounded-xl p-6 shadow-sm ${cardBg}`}>
+            <Card key={entry.id}>
+              <CardContent className="p-6">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <BookOpen size={16} className="text-gold-400" />
@@ -249,9 +278,9 @@ export default function Journal() {
                     ))}
                   </div>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded ${entry.followedPlan ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                <Badge className={entry.followedPlan ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}>
                   {entry.followedPlan ? 'Followed Plan' : 'Deviated from Plan'}
-                </span>
+                </Badge>
               </div>
               <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{entry.notes}</p>
               {entry.lessonsLearned && (
@@ -260,7 +289,8 @@ export default function Journal() {
                   <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-amber-800'}`}>{entry.lessonsLearned}</p>
                 </div>
               )}
-            </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

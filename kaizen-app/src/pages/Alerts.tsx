@@ -2,15 +2,13 @@ import React, { useState } from 'react';
 import { useTrading } from '../context/TradingContext';
 import { useMarketData } from '../context/MarketDataContext';
 import { useTheme } from '../context/ThemeContext';
-import { formatCurrency } from '../utils/helpers';
+import { formatInstrumentQuote, getInstrumentCategory } from '../utils/helpers';
 import { Bell, Plus, Trash2, TrendingUp, TrendingDown, Activity, BarChart3 } from 'lucide-react';
-import { Alert, Stock } from '../types';
-
-function formatQuote(stock: Stock | undefined, value: number) {
-  if (stock?.quoteUnit === 'cents') return `${Math.round(value * 100)}¢`;
-  if (stock?.quoteUnit === 'rate') return value.toFixed(4);
-  return formatCurrency(value);
-}
+import { Alert } from '../types';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Input } from '../components/ui/input';
 
 const ALERT_TYPES: { value: Alert['type']; label: string; icon: React.ElementType }[] = [
   { value: 'price_above', label: 'Price Above', icon: TrendingUp },
@@ -30,9 +28,6 @@ export default function Alerts() {
   const [alertType, setAlertType] = useState<Alert['type']>('price_above');
   const [value, setValue] = useState('');
 
-  const cardBg = isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-100';
-  const inputBg = isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900';
-
   const handleCreate = () => {
     if (!value) return;
     addAlert({
@@ -50,29 +45,32 @@ export default function Alerts() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold">Alerts</h1>
-          <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Set price levels and technical signals to watch</p>
+          <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Set market triggers across stocks, prediction markets, forex, and crypto.</p>
         </div>
-        <button
+        <Button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-navy-800 text-white rounded-lg text-sm font-medium hover:bg-navy-700 transition-colors"
         >
           <Plus size={16} /> New Alert
-        </button>
+        </Button>
       </div>
 
       {showForm && (
-        <div className={`rounded-xl p-6 shadow-sm mb-6 ${cardBg}`}>
-          <h3 className="font-semibold mb-4">Create Alert</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Create Alert</CardTitle>
+            <CardDescription>Build a watchlist trigger using live market quotes and technical thresholds.</CardDescription>
+          </CardHeader>
+          <CardContent>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <div>
               <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Market</label>
               <select
                 value={symbol}
                 onChange={e => setSymbol(e.target.value)}
-                className={`mt-1 w-full px-3 py-2 rounded-lg border text-sm outline-none ${inputBg}`}
+                className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none ${isDark ? 'border-gray-700 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-900'}`}
               >
                 {instruments.map(s => <option key={s.symbol} value={s.symbol}>{s.symbol} — {s.name}</option>)}
               </select>
@@ -82,7 +80,7 @@ export default function Alerts() {
               <select
                 value={alertType}
                 onChange={e => setAlertType(e.target.value as Alert['type'])}
-                className={`mt-1 w-full px-3 py-2 rounded-lg border text-sm outline-none ${inputBg}`}
+                className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none ${isDark ? 'border-gray-700 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-900'}`}
               >
                 {ALERT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
@@ -91,54 +89,64 @@ export default function Alerts() {
               <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 {alertType.includes('price') ? 'Price ($)' : alertType.includes('rsi') ? 'RSI Value' : 'Threshold'}
               </label>
-              <input
+              <Input
                 type="number"
                 value={value}
                 onChange={e => setValue(e.target.value)}
                 placeholder={alertType.includes('price') ? '0.00' : '0'}
-                className={`mt-1 w-full px-3 py-2 rounded-lg border text-sm outline-none ${inputBg}`}
+                className="mt-1"
               />
             </div>
             <div className="flex items-end">
-              <button
+              <Button
                 onClick={handleCreate}
                 disabled={!value}
-                className="w-full py-2 bg-navy-800 text-white rounded-lg text-sm font-medium hover:bg-navy-700 transition-colors disabled:opacity-50"
+                className="w-full"
               >
                 Create Alert
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className={`rounded-xl p-5 shadow-sm ${cardBg}`}>
-          <div className="flex items-center gap-2 mb-1">
+        <Card>
+          <CardContent className="p-5">
+          <div className="mb-1 flex items-center gap-2">
             <Bell size={16} className="text-gold-400" />
             <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Active Alerts</span>
           </div>
           <p className="text-2xl font-bold">{activeAlerts.length}</p>
-        </div>
-        <div className={`rounded-xl p-5 shadow-sm ${cardBg}`}>
-          <div className="flex items-center gap-2 mb-1">
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+          <div className="mb-1 flex items-center gap-2">
             <Bell size={16} className="text-emerald-500" />
             <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Triggered</span>
           </div>
           <p className="text-2xl font-bold">{triggeredAlerts.length}</p>
-        </div>
-        <div className={`rounded-xl p-5 shadow-sm ${cardBg}`}>
-          <div className="flex items-center gap-2 mb-1">
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+          <div className="mb-1 flex items-center gap-2">
             <Bell size={16} className={isDark ? 'text-gray-500' : 'text-gray-400'} />
             <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Total</span>
           </div>
           <p className="text-2xl font-bold">{alerts.length}</p>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Active Alerts */}
-      <div className={`rounded-xl p-6 shadow-sm mb-6 ${cardBg}`}>
-        <h3 className="font-semibold mb-4">Active Alerts</h3>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Active Alerts</CardTitle>
+          <CardDescription>Monitor pending triggers and remove setups that no longer fit your plan.</CardDescription>
+        </CardHeader>
+        <CardContent>
         {activeAlerts.length === 0 ? (
           <p className={`text-sm text-center py-8 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
             No active alerts. Create one to get started.
@@ -149,34 +157,40 @@ export default function Alerts() {
               const stock = instruments.find(s => s.symbol === alert.symbol);
               const typeInfo = ALERT_TYPES.find(t => t.value === alert.type)!;
               const Icon = typeInfo.icon;
+              const category = stock ? getInstrumentCategory(stock) : 'stock';
               return (
-                <div key={alert.id} className={`flex items-center justify-between p-4 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                <div key={alert.id} className={`flex items-center justify-between rounded-2xl border p-4 ${isDark ? 'border-gray-800 bg-gray-800/60' : 'border-gray-100 bg-gray-50'}`}>
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDark ? 'bg-gray-700' : 'bg-navy-50'}`}>
                       <Icon size={18} className="text-navy-600" />
                     </div>
                     <div>
-                      <p className="font-semibold text-sm">{alert.symbol} — {typeInfo.label}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-sm">{alert.symbol} — {typeInfo.label}</p>
+                        <Badge variant={category === 'prediction' ? 'gold' : 'outline'}>{category}</Badge>
+                      </div>
                       <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                        Target: {alert.type.includes('price') ? formatQuote(stock, alert.value) : alert.value}
-                        {stock && ` | Current: ${formatQuote(stock, stock.price)}`}
+                        Target: {alert.type.includes('price') ? formatInstrumentQuote(stock || { quoteUnit: 'usd' }, alert.value) : alert.value}
+                        {stock && ` | Current: ${formatInstrumentQuote(stock, stock.price)}`}
                       </p>
                     </div>
                   </div>
-                  <button
+                  <Button
                     onClick={() => removeAlert(alert.id)}
-                    className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-gray-700 text-gray-500' : 'hover:bg-gray-200 text-gray-400'}`}
+                    variant="ghost"
+                    size="icon"
                   >
                     <Trash2 size={16} />
-                  </button>
+                  </Button>
                 </div>
               );
             })}
           </div>
         )}
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className={`p-4 rounded-lg text-xs ${isDark ? 'bg-gray-900/50 text-gray-500' : 'bg-gray-100 text-gray-400'}`}>
+      <div className={`rounded-xl border p-4 text-xs ${isDark ? 'border-gray-800 bg-gray-900/50 text-gray-500' : 'border-gray-100 bg-gray-100 text-gray-400'}`}>
         Alerts are simulated for paper trading purposes. In a live environment, alerts would trigger in real-time
         based on market data feeds.
       </div>

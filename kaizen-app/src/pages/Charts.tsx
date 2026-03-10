@@ -3,18 +3,14 @@ import { useSearchParams } from 'react-router-dom';
 import { useMarketData } from '../context/MarketDataContext';
 import { useTheme } from '../context/ThemeContext';
 import { getStockCandles } from '../data/stocks';
-import { formatCurrency, formatPercent, calculateRSI, calculateSMA, calculateEMA, calculateMACD, calculateBollingerBands } from '../utils/helpers';
-import { Stock } from '../types';
+import { formatPercent, calculateRSI, calculateSMA, calculateEMA, calculateMACD, calculateBollingerBands, formatInstrumentQuote, getInstrumentCategory } from '../utils/helpers';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import {
   ComposedChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, ReferenceLine
 } from 'recharts';
-
-function formatQuote(stock: Stock, value: number) {
-  if (stock.quoteUnit === 'cents') return `${Math.round(value * 100)}¢`;
-  if (stock.quoteUnit === 'rate') return value.toFixed(4);
-  return formatCurrency(value);
-}
 
 type Indicator = 'sma20' | 'sma50' | 'sma200' | 'ema12' | 'ema26' | 'bollinger' | 'rsi' | 'macd' | 'volume';
 
@@ -91,16 +87,16 @@ export default function Charts() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold">Technical Analysis</h1>
-          <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Charts and indicators for informed decisions</p>
+          <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Study price structure, technical indicators, and cross-market behavior from one charting workspace.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full items-center gap-3 lg:w-auto">
           <select
             value={symbol}
             onChange={e => setSymbol(e.target.value)}
-            className={`px-4 py-2 rounded-lg border text-sm font-medium outline-none ${isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300'}`}
+            className={`w-full rounded-lg border px-4 py-2 text-sm font-medium outline-none lg:w-[360px] ${isDark ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300'}`}
           >
             {instruments.map(s => (
               <option key={s.symbol} value={s.symbol}>{s.symbol} — {s.name}</option>
@@ -109,51 +105,50 @@ export default function Charts() {
         </div>
       </div>
 
-      <div className={`rounded-xl p-6 shadow-sm mb-6 ${cardBg}`}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
+      <Card className={`${cardBg} mb-6`}>
+        <CardHeader>
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
-              <span className="text-2xl font-bold">{stock.symbol}</span>
-              <span className={`ml-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{stock.name}</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle>{stock.symbol}</CardTitle>
+                <Badge variant={getInstrumentCategory(stock) === 'prediction' ? 'gold' : 'outline'}>{getInstrumentCategory(stock)}</Badge>
+              </div>
+              <CardDescription className="mt-1">{stock.name}</CardDescription>
+              <div className="mt-3 flex flex-wrap items-end gap-3">
+                <span className="text-3xl font-bold">{formatInstrumentQuote(stock, stock.price)}</span>
+                <span className={`text-sm ${stock.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                  {stock.change >= 0 ? '+' : ''}{formatInstrumentQuote(stock, Math.abs(stock.change))} ({formatPercent(stock.changePercent)})
+                </span>
+              </div>
             </div>
-            <div className="text-right">
-              <span className="text-2xl font-bold">{formatQuote(stock, stock.price)}</span>
-              <span className={`ml-2 text-sm ${stock.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                {stock.change >= 0 ? '+' : ''}{formatQuote(stock, Math.abs(stock.change))} ({formatPercent(stock.changePercent)})
-              </span>
-            </div>
-          </div>
-          <div className="flex gap-1">
+            <div className="flex flex-wrap gap-2">
             {[{ days: 30, label: '1M' }, { days: 90, label: '3M' }, { days: 180, label: '6M' }, { days: 365, label: '1Y' }].map(tf => (
-              <button
+              <Button
                 key={tf.days}
                 onClick={() => setTimeframe(tf.days)}
-                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                  timeframe === tf.days
-                    ? 'bg-navy-800 text-white'
-                    : isDark ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                variant={timeframe === tf.days ? 'default' : 'secondary'}
+                size="sm"
               >
                 {tf.label}
-              </button>
+              </Button>
             ))}
+            </div>
           </div>
-        </div>
+        </CardHeader>
 
-        <div className="flex flex-wrap gap-2 mb-4">
+        <CardContent>
+        <div className="mb-4 flex flex-wrap gap-2">
           {allIndicators.map(ind => (
-            <button
+            <Button
               key={ind.key}
               onClick={() => toggleIndicator(ind.key)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
-                indicators.has(ind.key)
-                  ? 'border-current opacity-100'
-                  : isDark ? 'border-gray-700 text-gray-500 opacity-60 hover:opacity-80' : 'border-gray-300 text-gray-400 opacity-60 hover:opacity-80'
-              }`}
+              variant="outline"
+              size="sm"
+              className={`rounded-full ${indicators.has(ind.key) ? 'opacity-100' : 'opacity-60 hover:opacity-80'}`}
               style={indicators.has(ind.key) ? { color: ind.color, borderColor: ind.color } : undefined}
             >
               {ind.label}
-            </button>
+            </Button>
           ))}
         </div>
 
@@ -161,7 +156,7 @@ export default function Charts() {
           <ComposedChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1f2937' : '#f0f0f0'} />
             <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} interval="preserveStartEnd" />
-            <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={v => formatQuote(stock, Number(v))} />
+            <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={v => formatInstrumentQuote(stock, Number(v))} />
             <Tooltip
               contentStyle={{
                 backgroundColor: isDark ? '#1f2937' : '#fff',
@@ -171,7 +166,7 @@ export default function Charts() {
                 color: isDark ? '#e5e7eb' : '#1f2937',
                 fontSize: '12px',
               }}
-              formatter={(value: any, name: any) => [typeof value === 'number' ? formatQuote(stock, value) : value, name]}
+              formatter={(value: any, name: any) => [typeof value === 'number' ? formatInstrumentQuote(stock, value) : value, name]}
             />
             <Line type="monotone" dataKey="close" stroke="#0F3A6B" strokeWidth={2} dot={false} name="Price" />
             {indicators.has('sma20') && <Line type="monotone" dataKey="sma20" stroke="#3B82F6" strokeWidth={1} dot={false} name="SMA 20" strokeDasharray="4 2" />}
@@ -190,7 +185,7 @@ export default function Charts() {
         </ResponsiveContainer>
 
         {showVolume && (
-          <div className="mt-4">
+          <div className="mt-6 rounded-2xl border p-4 dark:border-gray-800">
             <h4 className={`text-xs font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Volume</h4>
             <ResponsiveContainer width="100%" height={80}>
               <ComposedChart data={chartData} margin={{ top: 0, right: 5, bottom: 0, left: 5 }}>
@@ -203,7 +198,7 @@ export default function Charts() {
         )}
 
         {showRSI && (
-          <div className="mt-4">
+          <div className="mt-6 rounded-2xl border p-4 dark:border-gray-800">
             <h4 className={`text-xs font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>RSI (14)</h4>
             <ResponsiveContainer width="100%" height={100}>
               <ComposedChart data={chartData} margin={{ top: 0, right: 5, bottom: 0, left: 5 }}>
@@ -219,7 +214,7 @@ export default function Charts() {
         )}
 
         {showMACD && (
-          <div className="mt-4">
+          <div className="mt-6 rounded-2xl border p-4 dark:border-gray-800">
             <h4 className={`text-xs font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>MACD</h4>
             <ResponsiveContainer width="100%" height={100}>
               <ComposedChart data={chartData} margin={{ top: 0, right: 5, bottom: 0, left: 5 }}>
@@ -234,30 +229,36 @@ export default function Charts() {
             </ResponsiveContainer>
           </div>
         )}
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className={`rounded-xl p-6 shadow-sm ${cardBg}`}>
-        <h3 className="font-semibold mb-4">Stock Details</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <Card className={cardBg}>
+        <CardHeader>
+          <CardTitle>Instrument Details</CardTitle>
+          <CardDescription>Core quote stats and session context for the selected market.</CardDescription>
+        </CardHeader>
+        <CardContent>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {[
-            { label: 'Open', value: formatQuote(stock, stock.open) },
-            { label: 'High', value: formatQuote(stock, stock.high) },
-            { label: 'Low', value: formatQuote(stock, stock.low) },
-            { label: 'Prev Close', value: formatQuote(stock, stock.previousClose) },
+            { label: 'Open', value: formatInstrumentQuote(stock, stock.open) },
+            { label: 'High', value: formatInstrumentQuote(stock, stock.high) },
+            { label: 'Low', value: formatInstrumentQuote(stock, stock.low) },
+            { label: 'Prev Close', value: formatInstrumentQuote(stock, stock.previousClose) },
             { label: 'Volume', value: (stock.volume / 1000000).toFixed(1) + 'M' },
             { label: 'Market Cap', value: stock.marketCap ? `$${(stock.marketCap / 1000000000).toFixed(0)}B` : 'N/A' },
             { label: 'Sector', value: stock.sector || 'N/A' },
-            { label: 'Day Range', value: `${formatQuote(stock, stock.low)} - ${formatQuote(stock, stock.high)}` },
+            { label: 'Day Range', value: `${formatInstrumentQuote(stock, stock.low)} - ${formatInstrumentQuote(stock, stock.high)}` },
           ].map(item => (
-            <div key={item.label}>
+            <div key={item.label} className={`rounded-2xl border p-4 ${isDark ? 'border-gray-800 bg-gray-800/50' : 'border-gray-100 bg-gray-50'}`}>
               <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{item.label}</p>
               <p className="text-sm font-semibold mt-0.5">{item.value}</p>
             </div>
           ))}
         </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className={`mt-4 p-4 rounded-lg text-xs ${isDark ? 'bg-gray-900/50 text-gray-500' : 'bg-gray-100 text-gray-400'}`}>
+      <div className={`mt-4 rounded-xl border p-4 text-xs ${isDark ? 'border-gray-800 bg-gray-900/50 text-gray-500' : 'border-gray-100 bg-gray-100 text-gray-400'}`}>
         Technical indicators are tools, not crystal balls. Past performance does not predict future results.
         Always use multiple forms of analysis and proper risk management.
       </div>

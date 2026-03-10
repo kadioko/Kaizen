@@ -30,13 +30,20 @@ export default function PaperTrade() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState('');
 
-  const filteredStocks = useMemo(() => instruments.filter(s =>
-    (marketFilter === 'all' || getInstrumentCategory(s) === marketFilter) && (
-      s.symbol.toLowerCase().includes(search.toLowerCase()) ||
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      (s.sector || '').toLowerCase().includes(search.toLowerCase())
+  const categorizedInstruments = useMemo(() => (
+    instruments.map(instrument => ({
+      instrument,
+      category: getInstrumentCategory(instrument),
+    }))
+  ), [instruments]);
+
+  const filteredStocks = useMemo(() => categorizedInstruments.filter(({ instrument, category }) =>
+    (marketFilter === 'all' || category === marketFilter) && (
+      instrument.symbol.toLowerCase().includes(search.toLowerCase()) ||
+      instrument.name.toLowerCase().includes(search.toLowerCase()) ||
+      (instrument.sector || '').toLowerCase().includes(search.toLowerCase())
     )
-  ), [instruments, marketFilter, search]);
+  ).map(({ instrument }) => instrument), [categorizedInstruments, marketFilter, search]);
 
   useEffect(() => {
     if (filteredStocks.length === 0) return;
@@ -46,7 +53,10 @@ export default function PaperTrade() {
     }
   }, [filteredStocks, selectedSymbol]);
 
-  const stock = filteredStocks.find(s => s.symbol === selectedSymbol) || instruments.find(s => s.symbol === selectedSymbol) || filteredStocks[0] || instruments[0];
+  const stock = filteredStocks.find(s => s.symbol === selectedSymbol)
+    || (marketFilter === 'all' ? instruments.find(s => s.symbol === selectedSymbol) : undefined)
+    || filteredStocks[0]
+    || instruments[0];
   const selectedStock = stock || instruments[0];
   const selectedCategory = getInstrumentCategory(selectedStock);
 

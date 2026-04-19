@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { TwentyFirstToolbar } from '@21st-extension/toolbar-react';
+import { ReactPlugin } from '@21st-extension/react';
 import { ThemeProvider } from './context/ThemeContext';
 import { MarketDataProvider } from './context/MarketDataContext';
 import { TradingProvider } from './context/TradingContext';
@@ -33,6 +35,7 @@ function App() {
                 <Route path="pricing" element={<Pricing />} />
               </Route>
             </Routes>
+            <TwentyFirstToolbar config={{ plugins: [ReactPlugin] }} />
           </BrowserRouter>
         </TradingProvider>
       </MarketDataProvider>

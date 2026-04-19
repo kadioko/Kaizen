@@ -1,9 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import {
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  Gauge,
+  Layers3,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Wallet,
+} from 'lucide-react';
 import { useTrading } from '../context/TradingContext';
 import { useMarketData } from '../context/MarketDataContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatCurrency, formatPercent, formatInstrumentQuote, getInstrumentCategory, getSizeLabel } from '../utils/helpers';
-import { Search, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, AlertTriangle, Wallet, Gauge, Layers3 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -30,28 +40,39 @@ export default function PaperTrade() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState('');
 
-  const categorizedInstruments = useMemo(() => (
-    instruments.map(instrument => ({
-      instrument,
-      category: getInstrumentCategory(instrument),
-    }))
-  ), [instruments]);
+  const categorizedInstruments = useMemo(
+    () =>
+      instruments.map((instrument) => ({
+        instrument,
+        category: getInstrumentCategory(instrument),
+      })),
+    [instruments]
+  );
 
-  const categoryLists = useMemo(() => ({
-    all: categorizedInstruments.map(({ instrument }) => instrument),
-    stock: categorizedInstruments.filter(({ category }) => category === 'stock').map(({ instrument }) => instrument),
-    prediction: categorizedInstruments.filter(({ category }) => category === 'prediction').map(({ instrument }) => instrument),
-    forex: categorizedInstruments.filter(({ category }) => category === 'forex').map(({ instrument }) => instrument),
-    crypto: categorizedInstruments.filter(({ category }) => category === 'crypto').map(({ instrument }) => instrument),
-  }), [categorizedInstruments]);
+  const categoryLists = useMemo(
+    () => ({
+      all: categorizedInstruments.map(({ instrument }) => instrument),
+      stock: categorizedInstruments.filter(({ category }) => category === 'stock').map(({ instrument }) => instrument),
+      prediction: categorizedInstruments.filter(({ category }) => category === 'prediction').map(({ instrument }) => instrument),
+      forex: categorizedInstruments.filter(({ category }) => category === 'forex').map(({ instrument }) => instrument),
+      crypto: categorizedInstruments.filter(({ category }) => category === 'crypto').map(({ instrument }) => instrument),
+    }),
+    [categorizedInstruments]
+  );
 
-  const filteredStocks = useMemo(() => categorizedInstruments.filter(({ instrument, category }) =>
-    (marketFilter === 'all' || category === marketFilter) && (
-      instrument.symbol.toLowerCase().includes(search.toLowerCase()) ||
-      instrument.name.toLowerCase().includes(search.toLowerCase()) ||
-      (instrument.sector || '').toLowerCase().includes(search.toLowerCase())
-    )
-  ).map(({ instrument }) => instrument), [categorizedInstruments, marketFilter, search]);
+  const filteredStocks = useMemo(
+    () =>
+      categorizedInstruments
+        .filter(
+          ({ instrument, category }) =>
+            (marketFilter === 'all' || category === marketFilter) &&
+            (instrument.symbol.toLowerCase().includes(search.toLowerCase()) ||
+              instrument.name.toLowerCase().includes(search.toLowerCase()) ||
+              (instrument.sector || '').toLowerCase().includes(search.toLowerCase()))
+        )
+        .map(({ instrument }) => instrument),
+    [categorizedInstruments, marketFilter, search]
+  );
 
   const handleMarketFilterChange = (nextFilter: 'all' | 'stock' | 'prediction' | 'forex' | 'crypto') => {
     setMarketFilter(nextFilter);
@@ -63,37 +84,55 @@ export default function PaperTrade() {
 
   useEffect(() => {
     if (filteredStocks.length === 0) return;
-    const stillVisible = filteredStocks.some(s => s.symbol === selectedSymbol);
+    const stillVisible = filteredStocks.some((instrument) => instrument.symbol === selectedSymbol);
     if (!stillVisible) {
       setSelectedSymbol(filteredStocks[0].symbol);
     }
   }, [filteredStocks, selectedSymbol]);
 
-  const stock = filteredStocks.find(s => s.symbol === selectedSymbol)
-    || (marketFilter === 'all' ? instruments.find(s => s.symbol === selectedSymbol) : undefined)
-    || filteredStocks[0]
-    || instruments[0];
+  const stock =
+    filteredStocks.find((instrument) => instrument.symbol === selectedSymbol) ||
+    (marketFilter === 'all' ? instruments.find((instrument) => instrument.symbol === selectedSymbol) : undefined) ||
+    filteredStocks[0] ||
+    instruments[0];
   const selectedStock = stock || instruments[0];
   const selectedCategory = getInstrumentCategory(selectedStock);
 
-  const sharesNum = parseInt(shares) || 0;
+  const sharesNum = parseInt(shares, 10) || 0;
   const orderTotal = selectedStock.price * sharesNum;
-  const position = positions.find(p => p.symbol === selectedSymbol);
+  const position = positions.find((existingPosition) => existingPosition.symbol === selectedSymbol);
+  const investedCapital = positions.reduce((sum, existingPosition) => sum + existingPosition.currentPrice * existingPosition.shares, 0);
+  const totalPortfolioValue = balance + investedCapital;
 
   const maxBuyShares = Math.floor(balance / selectedStock.price);
   const maxSellShares = position?.shares || 0;
-  const riskPercent = (orderTotal / (balance + positions.reduce((s, p) => s + p.currentPrice * p.shares, 0))) * 100;
+  const riskPercent = totalPortfolioValue > 0 ? (orderTotal / totalPortfolioValue) * 100 : 0;
+  const largestPosition = positions.reduce((currentMax, currentPosition) => {
+    const currentValue = currentPosition.currentPrice * currentPosition.shares;
+    const maxValue = currentMax ? currentMax.currentPrice * currentMax.shares : 0;
+    return currentValue > maxValue ? currentPosition : currentMax;
+  }, positions[0]);
 
   const handleTrade = () => {
-    if (sharesNum <= 0) { setShowError('Enter a valid number of shares'); return; }
-    if (orderType === 'buy' && orderTotal > balance) { setShowError('Insufficient balance'); return; }
-    if (orderType === 'sell' && (!position || position.shares < sharesNum)) { setShowError('Insufficient shares'); return; }
+    if (sharesNum <= 0) {
+      setShowError('Enter a valid number of shares');
+      return;
+    }
+    if (orderType === 'buy' && orderTotal > balance) {
+      setShowError('Insufficient balance');
+      return;
+    }
+    if (orderType === 'sell' && (!position || position.shares < sharesNum)) {
+      setShowError('Insufficient shares');
+      return;
+    }
 
     const success = executeTrade(selectedSymbol, sharesNum, orderType, notes, strategy, emotion);
     if (success) {
       setShowSuccess(true);
       setShares('');
       setNotes('');
+      setStrategy('');
       setTimeout(() => setShowSuccess(false), 3000);
     } else {
       setShowError('Trade failed. Check your balance and positions.');
@@ -101,63 +140,79 @@ export default function PaperTrade() {
     setTimeout(() => setShowError(''), 3000);
   };
 
-  const cardBg = isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-100';
-
   if (!selectedStock) {
     return null;
   }
 
   return (
-    <div>
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold">Paper Trading</h1>
-          <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Practice across multi-asset markets with virtual capital and tighter execution discipline.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:w-[520px]">
-          <Card className={cardBg}>
-            <CardContent className="flex items-center gap-3 p-4">
-              <Wallet className="h-5 w-5 text-gold-400" />
-              <div>
-                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Cash</p>
-                <p className="text-sm font-semibold">{formatCurrency(balance)}</p>
+    <div className="space-y-6">
+      <Card className="overflow-hidden border-0 bg-gradient-to-br from-navy-950 via-navy-900 to-slate-900 text-white shadow-[0_35px_100px_-48px_rgba(15,58,107,0.95)]">
+        <CardContent className="relative p-6 sm:p-8">
+          <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.24),transparent_42%)]" />
+          <div className="relative grid gap-8 xl:grid-cols-[1.3fr_0.9fr]">
+            <div>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-gold-300">
+                <Sparkles size={14} />
+                Execution Lab
               </div>
-            </CardContent>
-          </Card>
-          <Card className={cardBg}>
-            <CardContent className="flex items-center gap-3 p-4">
-              <Layers3 className="h-5 w-5 text-navy-500" />
-              <div>
-                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Open Positions</p>
-                <p className="text-sm font-semibold">{positions.length}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className={cardBg}>
-            <CardContent className="flex items-center gap-3 p-4">
-              <Gauge className="h-5 w-5 text-emerald-500" />
-              <div>
-                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Buying Power</p>
-                <p className="text-sm font-semibold">{Math.floor(balance / selectedStock.price)} {getSizeLabel(selectedStock).toLowerCase()}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        {(isLoadingPolymarket || polymarketError) && (
-          <p className={`mt-2 text-xs ${polymarketError ? 'text-amber-500' : isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            {polymarketError ? `Live Polymarket feed unavailable: ${polymarketError}. Showing fallback prediction markets.` : 'Refreshing live Polymarket markets...'}
-          </p>
-        )}
-      </div>
+              <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold leading-tight sm:text-5xl">
+                Practice sizing, timing, and conviction before real money is on the line.
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+                The trading desk now separates browsing, order construction, and portfolio review so each decision feels deliberate instead of rushed.
+              </p>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_1fr_0.95fr]">
-        {/* Stock List */}
-        <Card className={cardBg}>
+              {(isLoadingPolymarket || polymarketError) && (
+                <div className={`mt-5 inline-flex rounded-full px-4 py-2 text-xs font-medium ${
+                  polymarketError ? 'bg-amber-400/15 text-amber-200' : 'bg-white/10 text-slate-200'
+                }`}>
+                  {polymarketError
+                    ? `Live Polymarket feed unavailable: ${polymarketError}. Showing fallback prediction markets.`
+                    : 'Refreshing live Polymarket markets...'}
+                </div>
+              )}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4 backdrop-blur">
+                <div className="flex items-center gap-3">
+                  <Wallet className="h-5 w-5 text-gold-300" />
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Cash</p>
+                    <p className="mt-1 text-xl font-semibold">{formatCurrency(balance)}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4 backdrop-blur">
+                <div className="flex items-center gap-3">
+                  <Layers3 className="h-5 w-5 text-sky-300" />
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Open positions</p>
+                    <p className="mt-1 text-xl font-semibold">{positions.length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4 backdrop-blur">
+                <div className="flex items-center gap-3">
+                  <Gauge className="h-5 w-5 text-emerald-300" />
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Buying power</p>
+                    <p className="mt-1 text-xl font-semibold">
+                      {Math.floor(balance / selectedStock.price)} {getSizeLabel(selectedStock).toLowerCase()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_1fr_0.92fr]">
+        <Card>
           <CardHeader className="pb-4">
-            <CardTitle>Market Browser</CardTitle>
-            <CardDescription>Browse instruments by asset class with prediction markets isolated to their own category.</CardDescription>
+            <CardTitle>Market browser</CardTitle>
+            <CardDescription>Filter by asset class and scan quickly before you commit to a setup.</CardDescription>
             <div className="flex flex-wrap gap-2 pt-2">
               {([
                 ['all', 'All'],
@@ -171,49 +226,53 @@ export default function PaperTrade() {
                   onClick={() => handleMarketFilterChange(value)}
                   variant={marketFilter === value ? 'default' : 'secondary'}
                   size="sm"
-                  className="rounded-full"
                 >
                   {label}
                 </Button>
               ))}
             </div>
             <div className="relative mt-2">
-              <Search size={16} className="text-gray-400" />
               <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <Input
                 type="text"
                 placeholder={getSearchPlaceholder(marketFilter)}
                 value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="pl-10"
+                onChange={(event) => setSearch(event.target.value)}
+                className="h-11 rounded-full pl-10"
               />
             </div>
           </CardHeader>
-          <CardContent key={marketFilter} className="max-h-[620px] space-y-3 overflow-y-auto pt-0">
-            {filteredStocks.map(s => (
+          <CardContent className="max-h-[700px] space-y-3 overflow-y-auto pt-0">
+            {filteredStocks.map((instrument) => (
               <button
-                key={s.symbol}
-                onClick={() => setSelectedSymbol(s.symbol)}
-                className={`w-full rounded-2xl border p-4 text-left transition-all ${
-                  selectedSymbol === s.symbol
-                    ? isDark ? 'border-navy-700 bg-navy-900/30' : 'border-navy-200 bg-navy-50'
-                    : isDark ? 'border-gray-800 hover:bg-gray-800' : 'border-gray-100 hover:bg-gray-50'
+                key={instrument.symbol}
+                onClick={() => setSelectedSymbol(instrument.symbol)}
+                className={`w-full rounded-[1.4rem] border p-4 text-left transition-all duration-200 ${
+                  selectedSymbol === instrument.symbol
+                    ? isDark
+                      ? 'border-navy-700 bg-navy-900/30'
+                      : 'border-navy-200 bg-navy-50'
+                    : isDark
+                      ? 'border-white/10 bg-white/5 hover:bg-white/10'
+                      : 'border-slate-200 bg-white/70 hover:bg-white'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold text-sm">{s.symbol}</p>
-                      <Badge variant={getInstrumentCategory(s) === 'prediction' ? 'gold' : 'secondary'}>{getInstrumentCategory(s)}</Badge>
+                      <p className="text-sm font-semibold">{instrument.symbol}</p>
+                      <Badge variant={getInstrumentCategory(instrument) === 'prediction' ? 'gold' : 'secondary'}>
+                        {getInstrumentCategory(instrument)}
+                      </Badge>
                     </div>
-                    <p className={`mt-1 line-clamp-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{s.name}</p>
-                    <p className={`text-[11px] mt-1 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>{s.sector}</p>
+                    <p className={`mt-1 line-clamp-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{instrument.name}</p>
+                    <p className={`mt-1 text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{instrument.sector}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium">{formatInstrumentQuote(s, s.price)}</p>
-                    <p className={`text-xs flex items-center gap-0.5 justify-end ${s.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {s.change >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                    {s.change >= 0 ? '+' : ''}{formatPercent(s.changePercent)}
+                    <p className="text-sm font-semibold">{formatInstrumentQuote(instrument, instrument.price)}</p>
+                    <p className={`mt-1 inline-flex items-center gap-1 text-xs ${instrument.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {instrument.change >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                      {formatPercent(instrument.changePercent)}
                     </p>
                   </div>
                 </div>
@@ -222,8 +281,7 @@ export default function PaperTrade() {
           </CardContent>
         </Card>
 
-        {/* Order Form */}
-        <Card className={cardBg}>
+        <Card>
           <CardHeader>
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -232,209 +290,226 @@ export default function PaperTrade() {
                   <Badge variant={selectedCategory === 'prediction' ? 'gold' : 'outline'}>{selectedCategory}</Badge>
                 </div>
                 <CardDescription className="mt-1">{selectedStock.name}</CardDescription>
-                <p className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{selectedStock.sector} · {getSizeLabel(selectedStock)}</p>
+                <p className={`mt-2 text-xs uppercase tracking-[0.18em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {selectedStock.sector} · {getSizeLabel(selectedStock)}
+                </p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold">{formatInstrumentQuote(selectedStock, selectedStock.price)}</p>
-                <p className={`text-sm ${selectedStock.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                  {selectedStock.change >= 0 ? '+' : ''}{formatInstrumentQuote(selectedStock, Math.abs(selectedStock.change))} ({formatPercent(selectedStock.changePercent)})
+                <p className="text-3xl font-bold tracking-tight">{formatInstrumentQuote(selectedStock, selectedStock.price)}</p>
+                <p className={`mt-2 text-sm ${selectedStock.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                  {selectedStock.change >= 0 ? '+' : '-'}
+                  {formatInstrumentQuote(selectedStock, Math.abs(selectedStock.change))} ({formatPercent(selectedStock.changePercent)})
                 </p>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid grid-cols-2 gap-2">
-            <Button
-              onClick={() => setOrderType('buy')}
-              variant={orderType === 'buy' ? 'default' : 'secondary'}
-              className={orderType === 'buy' ? 'bg-emerald-500 hover:bg-emerald-600' : ''}
-            >
-              <ArrowUpRight size={16} className="inline mr-1" /> Buy
-            </Button>
-            <Button
-              onClick={() => setOrderType('sell')}
-              variant={orderType === 'sell' ? 'destructive' : 'secondary'}
-            >
-              <ArrowDownRight size={16} className="inline mr-1" /> Sell
-            </Button>
+              <Button
+                onClick={() => setOrderType('buy')}
+                variant={orderType === 'buy' ? 'default' : 'secondary'}
+                className={orderType === 'buy' ? 'bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-500 dark:hover:bg-emerald-600' : ''}
+              >
+                <ArrowUpRight size={16} />
+                Buy
+              </Button>
+              <Button onClick={() => setOrderType('sell')} variant={orderType === 'sell' ? 'destructive' : 'secondary'}>
+                <ArrowDownRight size={16} />
+                Sell
+              </Button>
             </div>
 
-          <div className="space-y-4">
             <div>
               <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{getSizeLabel(selectedStock)}</label>
               <Input
                 type="number"
                 value={shares}
-                onChange={e => setShares(e.target.value)}
+                onChange={(event) => setShares(event.target.value)}
                 placeholder="0"
                 min="1"
-                className="mt-1 h-12 text-lg font-semibold"
+                className="mt-1 h-12 rounded-2xl text-lg font-semibold"
               />
-              <div className="flex justify-between mt-1">
-                <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>
                   Max: {orderType === 'buy' ? maxBuyShares : maxSellShares} {getSizeLabel(selectedStock).toLowerCase()}
                 </span>
                 <button
                   onClick={() => setShares(String(orderType === 'buy' ? maxBuyShares : maxSellShares))}
-                  className="text-xs text-gold-400 hover:text-gold-500"
+                  className="font-semibold text-gold-500 hover:text-gold-600"
+                  type="button"
                 >
-                  Max
+                  Use max
                 </button>
               </div>
             </div>
 
-            <div className={`rounded-2xl border p-4 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
-              <div className="flex justify-between text-sm mb-2">
-                <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Price</span>
+            <div className={`rounded-[1.5rem] border p-4 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-50/80'}`}>
+              <div className="mb-2 flex justify-between text-sm">
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Price</span>
                 <span>{formatInstrumentQuote(selectedStock, selectedStock.price)}</span>
               </div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>{getSizeLabel(selectedStock)}</span>
+              <div className="mb-2 flex justify-between text-sm">
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>{getSizeLabel(selectedStock)}</span>
                 <span>{sharesNum}</span>
               </div>
               <Separator className="my-3" />
-              <div className="border-inherit pt-0">
-                <div className="flex justify-between font-bold">
-                  <span>Total</span>
-                  <span>{formatCurrency(orderTotal)}</span>
-                </div>
+              <div className="flex justify-between text-base font-bold">
+                <span>Total</span>
+                <span>{formatCurrency(orderTotal)}</span>
               </div>
             </div>
 
             {riskPercent > 5 && (
-              <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+              <div className="flex items-center gap-2 rounded-[1.2rem] border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
                 <AlertTriangle size={16} />
-                <span>This trade is {riskPercent.toFixed(1)}% of your portfolio. Consider the 2% rule.</span>
+                <span>This trade is {riskPercent.toFixed(1)}% of your portfolio. Consider your sizing rule before sending it.</span>
               </div>
             )}
 
             <div>
-              <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Strategy (optional)</label>
+              <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Strategy</label>
               <Input
                 type="text"
                 value={strategy}
-                onChange={e => setStrategy(e.target.value)}
-                placeholder="e.g., Breakout, Mean reversion"
-                className="mt-1"
+                onChange={(event) => setStrategy(event.target.value)}
+                placeholder="Breakout, mean reversion, event scalp..."
+                className="mt-1 rounded-2xl"
               />
             </div>
 
             <div>
-              <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>How are you feeling?</label>
+              <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Emotional state</label>
               <div className="mt-2 flex flex-wrap gap-2">
-                {(['confident', 'neutral', 'fearful', 'greedy', 'fomo'] as const).map(e => (
+                {(['confident', 'neutral', 'fearful', 'greedy', 'fomo'] as const).map((currentEmotion) => (
                   <Button
-                    key={e}
-                    onClick={() => setEmotion(e)}
-                    variant={emotion === e ? 'default' : 'secondary'}
+                    key={currentEmotion}
+                    onClick={() => setEmotion(currentEmotion)}
+                    variant={emotion === currentEmotion ? 'default' : 'secondary'}
                     size="sm"
-                    className="capitalize rounded-full"
+                    className="capitalize"
                   >
-                    {e}
+                    {currentEmotion}
                   </Button>
                 ))}
               </div>
             </div>
 
             <div>
-              <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Trade Notes (optional)</label>
+              <label className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Trade notes</label>
               <textarea
                 value={notes}
-                onChange={e => setNotes(e.target.value)}
-                placeholder="Why are you making this trade?"
-                rows={2}
-                className={`mt-1 w-full resize-none rounded-lg border px-3 py-2 text-sm outline-none ${isDark ? 'border-gray-700 bg-gray-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="What is the setup, invalidation, and intended management plan?"
+                rows={3}
+                className={`mt-1 w-full resize-none rounded-[1.25rem] border px-4 py-3 text-sm outline-none transition-colors ${
+                  isDark ? 'border-white/10 bg-white/5 text-white placeholder:text-slate-500' : 'border-slate-200 bg-white/70 text-slate-900 placeholder:text-slate-400'
+                }`}
               />
             </div>
 
             <button
               onClick={handleTrade}
               disabled={sharesNum <= 0}
-              className={`w-full rounded-lg py-3 font-semibold text-white text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`w-full rounded-[1.25rem] py-3 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                 orderType === 'buy' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'
               }`}
             >
-              {orderType === 'buy' ? 'Buy' : 'Sell'} {stock.symbol}
+              {orderType === 'buy' ? 'Buy' : 'Sell'} {selectedStock.symbol}
             </button>
 
             {showSuccess && (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center text-sm font-medium text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
-                Trade executed successfully!
+              <div className="rounded-[1.2rem] border border-emerald-200 bg-emerald-50 p-3 text-center text-sm font-medium text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                Trade executed successfully.
               </div>
             )}
             {showError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-center text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+              <div className="rounded-[1.2rem] border border-red-200 bg-red-50 p-3 text-center text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
                 {showError}
               </div>
             )}
-          </div>
           </CardContent>
         </Card>
 
-        {/* Portfolio */}
         <div className="space-y-6">
-          <Card className={cardBg}>
+          <Card>
             <CardHeader>
-              <CardTitle>Account Summary</CardTitle>
-              <CardDescription>Review your capital and deployed exposure before placing the next trade.</CardDescription>
+              <CardTitle>Account summary</CardTitle>
+              <CardDescription>Check exposure before adding more risk.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               <div className="flex justify-between">
-                <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Cash Balance</span>
+                <span className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Cash balance</span>
                 <span className="font-semibold">{formatCurrency(balance)}</span>
               </div>
               <div className="flex justify-between">
-                <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Invested</span>
-                <span className="font-semibold">{formatCurrency(positions.reduce((s, p) => s + p.currentPrice * p.shares, 0))}</span>
+                <span className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Invested capital</span>
+                <span className="font-semibold">{formatCurrency(investedCapital)}</span>
               </div>
-              <div className="border-t border-inherit pt-2 flex justify-between">
-                <span className="text-sm font-medium">Total</span>
-                <span className="font-bold">{formatCurrency(balance + positions.reduce((s, p) => s + p.currentPrice * p.shares, 0))}</span>
+              <div className="flex justify-between">
+                <span className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Largest position</span>
+                <span className="font-semibold">{largestPosition ? largestPosition.symbol : 'None'}</span>
+              </div>
+              <div className="flex justify-between border-t border-inherit pt-3">
+                <span className="text-sm font-medium">Total equity</span>
+                <span className="text-lg font-bold">{formatCurrency(totalPortfolioValue)}</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className={cardBg}>
+          <Card className={`${isDark ? 'border-gold-400/10 bg-gradient-to-br from-navy-950/70 to-slate-950/90' : 'border-gold-100 bg-gradient-to-br from-navy-50 to-white'}`}>
+            <CardContent className="p-6">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gold-400 text-white">
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Execution checklist</p>
+                  <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Know your thesis, invalidation, and position size before clicking buy or sell. If one is missing, the trade is not ready.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
             <CardHeader>
-              <CardTitle>Positions</CardTitle>
-              <CardDescription>Track the active book and spot winners, laggards, and mis-sized trades quickly.</CardDescription>
+              <CardTitle>Open positions</CardTitle>
+              <CardDescription>Keep the active book visible and easy to review.</CardDescription>
             </CardHeader>
             <CardContent>
-            {positions.length === 0 ? (
-              <p className={`text-sm text-center py-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>No open positions</p>
-            ) : (
-              <div className="space-y-3">
-                {positions.map(p => {
-                  const positionStock = instruments.find(s => s.symbol === p.symbol) || selectedStock;
-                  const positionCategory = getInstrumentCategory(positionStock);
-                  const pnl = (p.currentPrice - p.entryPrice) * p.shares;
-                  const pnlPct = ((p.currentPrice - p.entryPrice) / p.entryPrice) * 100;
-                  return (
-                    <div key={p.id} className={`rounded-2xl border p-3 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-sm">{p.symbol}</p>
-                            <Badge variant={positionCategory === 'prediction' ? 'gold' : 'outline'}>{positionCategory}</Badge>
+              {positions.length === 0 ? (
+                <p className={`py-6 text-center text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>No open positions.</p>
+              ) : (
+                <div className="space-y-3">
+                  {positions.map((currentPosition) => {
+                    const positionStock = instruments.find((instrument) => instrument.symbol === currentPosition.symbol) || selectedStock;
+                    const positionCategory = getInstrumentCategory(positionStock);
+                    const pnl = (currentPosition.currentPrice - currentPosition.entryPrice) * currentPosition.shares;
+                    const pnlPct = ((currentPosition.currentPrice - currentPosition.entryPrice) / currentPosition.entryPrice) * 100;
+
+                    return (
+                      <div key={currentPosition.id} className={`rounded-[1.4rem] border p-4 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white/70'}`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold">{currentPosition.symbol}</p>
+                              <Badge variant={positionCategory === 'prediction' ? 'gold' : 'outline'}>{positionCategory}</Badge>
+                            </div>
+                            <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                              {currentPosition.shares} @ {formatInstrumentQuote(positionStock, currentPosition.entryPrice)}
+                            </p>
                           </div>
-                          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                            {p.shares} @ {formatInstrumentQuote(positionStock, p.entryPrice)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className={`text-sm font-medium ${pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {formatCurrency(pnl)}
-                          </p>
-                          <p className={`text-xs ${pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {formatPercent(pnlPct)}
-                          </p>
+                          <div className="text-right">
+                            <p className={`text-sm font-semibold ${pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{formatCurrency(pnl)}</p>
+                            <p className={`mt-1 text-xs ${pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatPercent(pnlPct)}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

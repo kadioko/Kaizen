@@ -15,6 +15,7 @@ import Alerts from './pages/Alerts';
 import Coach from './pages/Coach';
 import Learn from './pages/Learn';
 import Pricing from './pages/Pricing';
+import OrderFlowCommander from './pages/OrderFlowCommander';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Layout />}>
                 <Route index element={<Dashboard />} />
+                <Route path="kaizen" element={<Dashboard />} />
                 <Route path="trade" element={<PaperTrade />} />
                 <Route path="charts" element={<Charts />} />
                 <Route path="journal" element={<Journal />} />
@@ -33,6 +35,7 @@ function App() {
                 <Route path="coach" element={<Coach />} />
                 <Route path="learn" element={<Learn />} />
                 <Route path="pricing" element={<Pricing />} />
+                <Route path="orderflow-commander" element={<OrderFlowCommander />} />
               </Route>
             </Routes>
             <TwentyFirstToolbar config={{ plugins: [ReactPlugin] }} />

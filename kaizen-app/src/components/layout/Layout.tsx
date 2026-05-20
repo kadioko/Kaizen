@@ -6,7 +6,11 @@ import { useTheme } from '../../context/ThemeContext';
 
 const pageDetails: Record<string, { title: string; description: string }> = {
   '/': {
-    title: 'Trading Command Center',
+    title: 'Kaizen Command Center',
+    description: 'Monitor performance, protect risk, and stay in sync with the market pulse.',
+  },
+  '/kaizen': {
+    title: 'Kaizen Command Center',
     description: 'Monitor performance, protect risk, and stay in sync with the market pulse.',
   },
   '/trade': {
@@ -41,6 +45,10 @@ const pageDetails: Record<string, { title: string; description: string }> = {
     title: 'Plans',
     description: 'See how Kaizen scales from disciplined practice to full coaching support.',
   },
+  '/orderflow-commander': {
+    title: 'OrderFlow Commander',
+    description: 'A structured futures order-flow execution workspace for MNQ, MES, and GC.',
+  },
 };
 
 export default function Layout() {
@@ -48,6 +56,7 @@ export default function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const pageMeta = pageDetails[location.pathname] ?? pageDetails['/'];
+  const workspaceLabel = location.pathname === '/orderflow-commander' ? 'OrderFlow Commander' : 'Kaizen Workspace';
 
   useEffect(() => {
     const body = document.body;
@@ -96,7 +105,7 @@ export default function Layout() {
               <div className="max-w-2xl">
                 <div className={`mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] ${isDark ? 'bg-white/5 text-gold-300' : 'bg-navy-50 text-navy-700'}`}>
                   <Sparkles size={14} />
-                  Kaizen Workspace
+                  {workspaceLabel}
                 </div>
                 <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight">
                   {pageMeta.title}

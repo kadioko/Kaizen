@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   Bell,
   BookOpen,
@@ -13,11 +13,17 @@ import {
   Sparkles,
   Sun,
   TrendingUp,
+  Waves,
   X,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
-const navItems = [
+const workspaceItems = [
+  { to: '/', icon: LayoutDashboard, label: 'Kaizen', detail: 'Multi-market training OS' },
+  { to: '/orderflow-commander', icon: Waves, label: 'OrderFlow Commander', detail: 'Futures order-flow execution' },
+];
+
+const kaizenNavItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', detail: 'Performance and market pulse' },
   { to: '/trade', icon: CandlestickChart, label: 'Paper Trade', detail: 'Execution simulator' },
   { to: '/charts', icon: TrendingUp, label: 'Charts', detail: 'Analysis and structure' },
@@ -36,6 +42,8 @@ interface SidebarProps {
 
 export default function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
   const { isDark, toggleTheme } = useTheme();
+  const location = useLocation();
+  const isCommander = location.pathname === '/orderflow-commander';
 
   return (
     <aside className={`flex h-full w-80 max-w-[88vw] flex-col border-r ${isDark ? 'border-white/10 bg-slate-950/90' : 'border-white/60 bg-white/80'} backdrop-blur-2xl`}>
@@ -47,7 +55,7 @@ export default function Sidebar({ isMobileOpen = false, onClose }: SidebarProps)
               <span className="text-gold-400">ZEN</span>
             </h1>
             <p className={`mt-1 text-xs uppercase tracking-[0.28em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-              Master Your Edge
+              Build Better Decisions
             </p>
           </div>
           <button
@@ -63,19 +71,21 @@ export default function Sidebar({ isMobileOpen = false, onClose }: SidebarProps)
         <div className={`rounded-[1.5rem] border p-4 ${isDark ? 'border-white/10 bg-gradient-to-br from-navy-950 via-slate-900 to-slate-950' : 'border-slate-200 bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 text-white'} shadow-[0_22px_60px_-35px_rgba(15,58,107,0.9)]`}>
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-gold-300">
             <Sparkles size={12} />
-            Kaizen OS
+            {isCommander ? 'Commander Workspace' : 'Kaizen Workspace'}
           </div>
           <p className="text-lg font-semibold leading-tight">
-            Build calmer execution, cleaner reviews, and repeatable growth.
+            {isCommander
+              ? 'Turn order-flow context into structured futures execution plans.'
+              : 'Build calmer execution, cleaner reviews, and repeatable growth.'}
           </p>
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-2xl bg-white/10 px-3 py-3">
               <p className="text-xs uppercase tracking-[0.22em] text-white/60">Focus</p>
-              <p className="mt-1 font-semibold">Risk first</p>
+              <p className="mt-1 font-semibold">{isCommander ? 'Futures flow' : 'Risk first'}</p>
             </div>
             <div className="rounded-2xl bg-white/10 px-3 py-3">
               <p className="text-xs uppercase tracking-[0.22em] text-white/60">Mode</p>
-              <p className="mt-1 font-semibold">Paper only</p>
+              <p className="mt-1 font-semibold">{isCommander ? 'MVP blueprint' : 'Paper only'}</p>
             </div>
           </div>
         </div>
@@ -83,13 +93,14 @@ export default function Sidebar({ isMobileOpen = false, onClose }: SidebarProps)
 
       <nav className="flex-1 overflow-y-auto px-3 py-5">
         <p className={`mb-3 px-3 text-[11px] font-semibold uppercase tracking-[0.28em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-          Workspace
+          Platforms
         </p>
         <div className="space-y-2">
-          {navItems.map(({ to, icon: Icon, label, detail }) => (
+          {workspaceItems.map(({ to, icon: Icon, label, detail }) => (
             <NavLink
               key={to}
               to={to}
+              end={to === '/'}
               onClick={isMobileOpen ? onClose : undefined}
               className={({ isActive }) =>
                 `group flex items-center gap-3 rounded-[1.25rem] px-3 py-3 transition-all duration-200 ${
@@ -127,6 +138,57 @@ export default function Sidebar({ isMobileOpen = false, onClose }: SidebarProps)
             </NavLink>
           ))}
         </div>
+
+        {!isCommander && (
+          <>
+            <p className={`mb-3 mt-6 px-3 text-[11px] font-semibold uppercase tracking-[0.28em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              Kaizen Tools
+            </p>
+            <div className="space-y-2">
+              {kaizenNavItems.map(({ to, icon: Icon, label, detail }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === '/'}
+                  onClick={isMobileOpen ? onClose : undefined}
+                  className={({ isActive }) =>
+                    `group flex items-center gap-3 rounded-[1.25rem] px-3 py-3 transition-all duration-200 ${
+                      isActive
+                        ? isDark
+                          ? 'bg-white/8 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                          : 'bg-white text-navy-900 shadow-[0_18px_40px_-28px_rgba(15,58,107,0.75)]'
+                        : isDark
+                          ? 'text-slate-400 hover:bg-white/5 hover:text-white'
+                          : 'text-slate-600 hover:bg-white/70 hover:text-navy-900'
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <div className={`flex h-11 w-11 items-center justify-center rounded-2xl transition-colors ${
+                        isActive
+                          ? isDark
+                            ? 'bg-gold-400/15 text-gold-300'
+                            : 'bg-navy-50 text-navy-800'
+                          : isDark
+                            ? 'bg-white/5 text-slate-400 group-hover:text-white'
+                            : 'bg-slate-100 text-slate-500 group-hover:text-navy-800'
+                      }`}>
+                        <Icon size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{label}</p>
+                        <p className={`truncate text-xs ${isActive ? (isDark ? 'text-slate-400' : 'text-slate-500') : 'text-slate-400 dark:text-slate-500'}`}>
+                          {detail}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          </>
+        )}
       </nav>
 
       <div className="border-t border-inherit p-4">
@@ -147,9 +209,11 @@ export default function Sidebar({ isMobileOpen = false, onClose }: SidebarProps)
         </button>
 
         <div className={`mt-3 rounded-[1.4rem] border px-4 py-4 text-sm ${isDark ? 'border-white/10 bg-white/5 text-slate-300' : 'border-slate-200 bg-white/75 text-slate-600'}`}>
-          <p className="font-semibold text-inherit">Paper Trading Mode</p>
+          <p className="font-semibold text-inherit">{isCommander ? 'Manual MVP Scope' : 'Paper Trading Mode'}</p>
           <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Practice execution and review process quality before you scale real capital.
+            {isCommander
+              ? 'Documenting the futures execution assistant architecture before live broker or feed integration.'
+              : 'Practice execution and review process quality before you scale real capital.'}
           </p>
         </div>
       </div>

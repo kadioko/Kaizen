@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  CalendarDays,
   Copy,
   Plus,
   Target,
@@ -14,58 +15,40 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { formatCurrency, formatDate, generateId } from '../utils/helpers';
-import { instrumentConfig, levelTypes, mistakeTags, resistanceTypes, seedLevels, seedRows, supportTypes } from '../orderflow/constants';
+import { instrumentConfig, levelTypes, mistakeTags, resistanceTypes, supportTypes } from '../orderflow/constants';
 import { buildCommanderAnalytics } from '../orderflow/analytics';
 import { CommanderAnalyticsSection } from '../orderflow/components/CommanderAnalyticsSection';
 import { parseCsvRows } from '../orderflow/csv';
+import { defaultJournalDraft, defaultScoreWeights } from '../orderflow/defaults';
 import { calculateRiskMetrics } from '../orderflow/riskEngine';
+import { createLocalCommanderRepository } from '../orderflow/repository';
 import { buildCommanderPlan } from '../orderflow/setupEngine';
-import { clearCommanderState, loadCommanderState, saveCommanderState } from '../orderflow/storage';
 import {
   CommanderBias,
   CommanderInstrument,
   CommanderLevel,
+  CommanderScoreWeights,
+  CommanderWorkspaceState,
   CommanderSession,
   JournalRecord,
   LevelFilter,
   LevelType,
   MistakeTag,
+  NewsEvent,
   OrderFlowRow,
   RiskContext,
+  SetupPlaybook,
+  SetupTemplate,
   Timeframe,
 } from '../orderflow/types';
-
-const defaultJournalDraft = {
-  exit: '',
-  resultR: '',
-  profitLoss: '',
-  notes: '',
-  lessons: '',
-  mistakeTags: [] as MistakeTag[],
-};
 
 type OrderFlowSortKey = 'timestamp' | 'timeframe' | 'close' | 'delta' | 'volume' | 'source';
 type OrderFlowFilter = 'all' | 'M1' | 'M3' | 'M5' | 'manual' | 'csv' | 'positiveDelta' | 'negativeDelta';
 
 export default function OrderFlowCommander() {
   const { isDark } = useTheme();
-  const initialState = useMemo(() => loadCommanderState({
-    selectedInstrument: 'MNQ' as CommanderInstrument,
-    session: 'New York AM' as CommanderSession,
-    bias: 'Bullish' as CommanderBias,
-    riskContext: 'Balanced' as RiskContext,
-    manualPrice: '18945.50',
-    newsRisk: false,
-    levels: seedLevels,
-    orderFlowRows: seedRows,
-    riskInputs: {
-      accountSize: '25000',
-      riskPercent: '1',
-      tickValue: String(instrumentConfig.MNQ.defaultTickValue),
-    },
-    journalDraft: defaultJournalDraft,
-    journalRecords: [] as JournalRecord[],
-  }), []);
+  const repository = useMemo(() => createLocalCommanderRepository(), []);
+  const initialState = useMemo(() => repository.load(), [repository]);
   const [selectedInstrument, setSelectedInstrument] = useState<CommanderInstrument>(initialState.selectedInstrument);
   const [session, setSession] = useState<CommanderSession>(initialState.session);
   const [bias, setBias] = useState<CommanderBias>(initialState.bias);
@@ -102,6 +85,11 @@ export default function OrderFlowCommander() {
     notes: '',
   });
   const [riskInputs, setRiskInputs] = useState(initialState.riskInputs);
+  const [scoreWeights, setScoreWeights] = useState<CommanderScoreWeights>(initialState.scoreWeights);
+  const [minimumScore, setMinimumScore] = useState(initialState.minimumScore);
+  const [setupTemplates, setSetupTemplates] = useState<SetupTemplate[]>(initialState.setupTemplates);
+  const [playbooks, setPlaybooks] = useState<SetupPlaybook[]>(initialState.playbooks);
+  const [newsEvents, setNewsEvents] = useState<NewsEvent[]>(initialState.newsEvents);
   const [journalDraft, setJournalDraft] = useState(initialState.journalDraft);
   const [journalRecords, setJournalRecords] = useState<JournalRecord[]>(initialState.journalRecords);
   const [importSummary, setImportSummary] = useState('');
@@ -110,6 +98,33 @@ export default function OrderFlowCommander() {
   const [orderFlowFilter, setOrderFlowFilter] = useState<OrderFlowFilter>('all');
   const [selectedJournalRecordId, setSelectedJournalRecordId] = useState<string | null>(null);
   const [copySummary, setCopySummary] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialState.setupTemplates[0]?.id ?? '');
+  const [selectedPlaybookId, setSelectedPlaybookId] = useState<string>(initialState.playbooks[0]?.id ?? '');
+  const [templateForm, setTemplateForm] = useState({
+    name: '',
+    instrument: 'Any' as CommanderInstrument | 'Any',
+    session: 'Any' as CommanderSession | 'Any',
+    bias: 'Neutral' as CommanderBias,
+    riskContext: 'Balanced' as RiskContext,
+    newsRisk: false,
+    minimumScore: '70',
+    notes: '',
+  });
+  const [playbookForm, setPlaybookForm] = useState({
+    name: '',
+    setupType: 'Seller Absorption Long' as SetupPlaybook['setupType'],
+    checklist: '',
+    executionNotes: '',
+    favorite: false,
+  });
+  const [newsEventForm, setNewsEventForm] = useState({
+    title: '',
+    timestamp: new Date().toISOString().slice(0, 16),
+    instrument: 'All' as CommanderInstrument | 'All',
+    session: 'All' as CommanderSession | 'All',
+    impact: 'Medium' as NewsEvent['impact'],
+    notes: '',
+  });
 
   const config = instrumentConfig[selectedInstrument];
   const activeInstrumentLevels = useMemo(
@@ -173,19 +188,50 @@ export default function OrderFlowCommander() {
     () => journalRecords.find((record) => record.id === selectedJournalRecordId) ?? null,
     [journalRecords, selectedJournalRecordId]
   );
-
+  const scoreWeightTotal = useMemo(() => Object.values(scoreWeights).reduce((sum, value) => sum + value, 0), [scoreWeights]);
+  const currentSessionRecords = useMemo(
+    () =>
+      journalRecords.filter(
+        (record) => record.session === session && new Date(record.date).toDateString() === new Date().toDateString()
+      ),
+    [journalRecords, session]
+  );
+  const currentSessionLosses = useMemo(
+    () => currentSessionRecords.filter((record) => record.resultR < 0).length,
+    [currentSessionRecords]
+  );
+  const sessionLocked = currentSessionRecords.length >= 2 || currentSessionLosses >= 2;
+  const activeNewsEvents = useMemo(
+    () =>
+      newsEvents
+        .filter((event) => {
+          const eventTime = new Date(event.timestamp).getTime();
+          const diffMinutes = Math.abs(eventTime - Date.now()) / 60000;
+          const matchesInstrument = event.instrument === 'All' || event.instrument === selectedInstrument;
+          const matchesSession = event.session === 'All' || event.session === session;
+          return matchesInstrument && matchesSession && diffMinutes <= 120;
+        })
+        .sort((left, right) => new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime()),
+    [newsEvents, selectedInstrument, session]
+  );
+  const effectiveNewsRisk = newsRisk || activeNewsEvents.some((event) => event.impact === 'High');
+  const selectedPlaybook = useMemo(
+    () => playbooks.find((playbook) => playbook.id === selectedPlaybookId) ?? null,
+    [playbooks, selectedPlaybookId]
+  );
   const plan = useMemo(() => buildCommanderPlan({
     bias,
     session,
     riskContext,
-    newsRisk,
+    newsRisk: effectiveNewsRisk,
     currentPrice,
     levels: activeInstrumentLevels,
     rows: instrumentRows,
     tickSize: config.tickSize,
     proximityThreshold: config.proximityThreshold,
-  }), [activeInstrumentLevels, bias, config.proximityThreshold, config.tickSize, currentPrice, instrumentRows, newsRisk, riskContext, session]);
-
+    scoreWeights,
+    minimumScore,
+  }), [activeInstrumentLevels, bias, config.proximityThreshold, config.tickSize, currentPrice, effectiveNewsRisk, instrumentRows, minimumScore, riskContext, scoreWeights, session]);
   const riskMetrics = useMemo(() => calculateRiskMetrics({
     tickSize: config.tickSize,
     defaultTickValue: config.defaultTickValue,
@@ -197,11 +243,10 @@ export default function OrderFlowCommander() {
     riskPercent: riskInputs.riskPercent,
     tickValue: riskInputs.tickValue,
   }), [config.defaultTickValue, config.tickSize, plan.entry, plan.stop, plan.tp1, plan.tp2, riskInputs.accountSize, riskInputs.riskPercent, riskInputs.tickValue]);
-
   const analytics = useMemo(() => buildCommanderAnalytics(journalRecords), [journalRecords]);
 
   useEffect(() => {
-    saveCommanderState({
+    const state: CommanderWorkspaceState = {
       selectedInstrument,
       session,
       bias,
@@ -211,10 +256,17 @@ export default function OrderFlowCommander() {
       levels,
       orderFlowRows,
       riskInputs,
+      scoreWeights,
+      minimumScore,
+      setupTemplates,
+      playbooks,
+      newsEvents,
       journalDraft,
       journalRecords,
-    });
-  }, [bias, journalDraft, journalRecords, levels, manualPrice, newsRisk, orderFlowRows, riskContext, riskInputs, selectedInstrument, session]);
+    };
+
+    repository.save(state);
+  }, [bias, journalDraft, journalRecords, levels, manualPrice, minimumScore, newsEvents, newsRisk, orderFlowRows, playbooks, repository, riskContext, riskInputs, scoreWeights, selectedInstrument, session, setupTemplates]);
 
   const handleLevelSubmit = () => {
     const nextLevel: CommanderLevel = {
@@ -305,27 +357,147 @@ export default function OrderFlowCommander() {
     setImportSummary('Imported CSV rows cleared.');
   };
 
+  const handleApplyTemplate = (templateId: string) => {
+    const template = setupTemplates.find((item) => item.id === templateId);
+    if (!template) return;
+
+    setSelectedTemplateId(templateId);
+    if (template.instrument !== 'Any') {
+      setSelectedInstrument(template.instrument);
+      setLevelForm((previous) => ({ ...previous, instrument: template.instrument as CommanderInstrument }));
+      setFlowForm((previous) => ({ ...previous, instrument: template.instrument as CommanderInstrument }));
+      setRiskInputs((previous) => ({
+        ...previous,
+        tickValue: String(instrumentConfig[template.instrument as CommanderInstrument].defaultTickValue),
+      }));
+    }
+    if (template.session !== 'Any') setSession(template.session);
+    setBias(template.bias);
+    setRiskContext(template.riskContext);
+    setNewsRisk(template.newsRisk);
+    setMinimumScore(template.minimumScore);
+    setImportSummary(`Applied template: ${template.name}.`);
+  };
+
+  const handleSaveTemplate = () => {
+    if (!templateForm.name.trim()) return;
+    const nextTemplate: SetupTemplate = {
+      id: generateId(),
+      name: templateForm.name.trim(),
+      instrument: templateForm.instrument,
+      session: templateForm.session,
+      bias: templateForm.bias,
+      riskContext: templateForm.riskContext,
+      newsRisk: templateForm.newsRisk,
+      minimumScore: Number(templateForm.minimumScore) || 70,
+      notes: templateForm.notes.trim(),
+    };
+
+    setSetupTemplates((previous) => [nextTemplate, ...previous]);
+    setSelectedTemplateId(nextTemplate.id);
+    setTemplateForm({
+      name: '',
+      instrument: 'Any',
+      session: 'Any',
+      bias: 'Neutral',
+      riskContext: 'Balanced',
+      newsRisk: false,
+      minimumScore: String(minimumScore),
+      notes: '',
+    });
+  };
+
+  const handleSavePlaybook = () => {
+    if (!playbookForm.name.trim()) return;
+    const nextPlaybook: SetupPlaybook = {
+      id: generateId(),
+      name: playbookForm.name.trim(),
+      setupType: playbookForm.setupType,
+      checklist: playbookForm.checklist.trim(),
+      executionNotes: playbookForm.executionNotes.trim(),
+      favorite: playbookForm.favorite,
+    };
+
+    setPlaybooks((previous) => [nextPlaybook, ...previous]);
+    setSelectedPlaybookId(nextPlaybook.id);
+    setPlaybookForm({
+      name: '',
+      setupType: 'Seller Absorption Long',
+      checklist: '',
+      executionNotes: '',
+      favorite: false,
+    });
+  };
+
+  const handleSaveNewsEvent = () => {
+    if (!newsEventForm.title.trim()) return;
+    const nextEvent: NewsEvent = {
+      id: generateId(),
+      title: newsEventForm.title.trim(),
+      timestamp: new Date(newsEventForm.timestamp).toISOString(),
+      instrument: newsEventForm.instrument,
+      session: newsEventForm.session,
+      impact: newsEventForm.impact,
+      notes: newsEventForm.notes.trim(),
+    };
+
+    setNewsEvents((previous) =>
+      [nextEvent, ...previous].sort((left, right) => new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime())
+    );
+    setNewsEventForm({
+      title: '',
+      timestamp: new Date().toISOString().slice(0, 16),
+      instrument: 'All',
+      session: 'All',
+      impact: 'Medium',
+      notes: '',
+    });
+  };
+
+  const handleScreenshotUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ''));
+      reader.onerror = () => reject(new Error('Unable to read screenshot.'));
+      reader.readAsDataURL(file);
+    });
+
+    setJournalDraft((previous) => ({
+      ...previous,
+      screenshotName: file.name,
+      screenshotDataUrl: dataUrl,
+    }));
+    event.target.value = '';
+  };
+
   const handleClearJournalDraft = () => {
     setJournalDraft(defaultJournalDraft);
   };
 
   const handleResetCommanderState = () => {
-    clearCommanderState();
-    setSelectedInstrument('MNQ');
-    setSession('New York AM');
-    setBias('Bullish');
-    setRiskContext('Balanced');
-    setManualPrice('18945.50');
-    setNewsRisk(false);
-    setLevels(seedLevels);
-    setOrderFlowRows(seedRows);
-    setRiskInputs({
-      accountSize: '25000',
-      riskPercent: '1',
-      tickValue: String(instrumentConfig.MNQ.defaultTickValue),
-    });
-    setJournalDraft(defaultJournalDraft);
-    setJournalRecords([]);
+    const resetState = repository.reset();
+
+    setSelectedInstrument(resetState.selectedInstrument);
+    setSession(resetState.session);
+    setBias(resetState.bias);
+    setRiskContext(resetState.riskContext);
+    setManualPrice(resetState.manualPrice);
+    setNewsRisk(resetState.newsRisk);
+    setLevels(resetState.levels);
+    setOrderFlowRows(resetState.orderFlowRows);
+    setRiskInputs(resetState.riskInputs);
+    setScoreWeights(resetState.scoreWeights);
+    setMinimumScore(resetState.minimumScore);
+    setSetupTemplates(resetState.setupTemplates);
+    setPlaybooks(resetState.playbooks);
+    setNewsEvents(resetState.newsEvents);
+    setJournalDraft(resetState.journalDraft);
+    setJournalRecords(resetState.journalRecords);
+    setSelectedTemplateId(resetState.setupTemplates[0]?.id ?? '');
+    setSelectedPlaybookId(resetState.playbooks[0]?.id ?? '');
     setImportSummary('Commander state reset to defaults.');
   };
 
@@ -376,17 +548,13 @@ export default function OrderFlowCommander() {
       notes: journalDraft.notes,
       lessons: journalDraft.lessons,
       mistakeTags: journalDraft.mistakeTags,
+      screenshotName: journalDraft.screenshotName,
+      screenshotDataUrl: journalDraft.screenshotDataUrl,
+      screenshotAnnotation: journalDraft.screenshotAnnotation,
     };
 
     setJournalRecords((previous) => [record, ...previous]);
-    setJournalDraft({
-      exit: '',
-      resultR: '',
-      profitLoss: '',
-      notes: '',
-      lessons: '',
-      mistakeTags: [],
-    });
+    setJournalDraft(defaultJournalDraft);
   };
 
   const toggleMistakeTag = (tag: MistakeTag) => {
@@ -437,6 +605,83 @@ export default function OrderFlowCommander() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>What OrderFlow Commander Is For</CardTitle>
+            <CardDescription>Use Commander as a structured execution assistant for futures order-flow planning, not as a signal or broker tool.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className={`rounded-[1.15rem] border p-4 ${isDark ? 'border-cyan-500/20 bg-cyan-500/10' : 'border-cyan-200 bg-cyan-50'}`}>
+              <p className="text-sm font-semibold">Primary purpose</p>
+              <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                OrderFlow Commander helps you organize market context for `MNQ`, `MES`, and `GC`, evaluate setup quality at key levels, apply risk rules, and keep a disciplined journal around execution.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {[
+                'Plan around supply, demand, VWAP, value, and session references.',
+                'Record delta, volume, aggression, and continuation behavior.',
+                'Generate a readable trade plan with valid and skip reasons.',
+                'Enforce minimum score, risk/reward, and session discipline.',
+              ].map((item) => (
+                <div key={item} className={`rounded-[1rem] border p-3 text-sm ${isDark ? 'border-white/10 bg-white/5 text-slate-300' : 'border-slate-200 bg-white/70 text-slate-700'}`}>
+                  {item}
+                </div>
+              ))}
+            </div>
+
+            <div className={`rounded-[1.15rem] border p-4 ${isDark ? 'border-amber-800/30 bg-amber-900/20' : 'border-amber-200 bg-amber-50'}`}>
+              <p className="text-sm font-semibold text-amber-500">What it is not for</p>
+              <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-amber-100' : 'text-amber-800'}`}>
+                It does not provide financial advice, promise profitable trades, or place live broker orders. It is a decision-support, review, and journaling workspace.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>How To Use It</CardTitle>
+            <CardDescription>A simple operating loop for getting value from Commander each session.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[
+              {
+                step: '1. Set session context',
+                text: 'Choose the instrument, session, bias, risk context, and whether manual news risk is active.',
+              },
+              {
+                step: '2. Mark the important levels',
+                text: 'Load or create the supply, demand, VWAP, VAH, VAL, overnight, and prior-day references that matter today.',
+              },
+              {
+                step: '3. Add order-flow evidence',
+                text: 'Enter manual rows or import CSV data for M1, M3, and M5 so the engine can assess delta, volume, and aggression behavior.',
+              },
+              {
+                step: '4. Review the generated plan',
+                text: 'Use the setup type, score breakdown, support/resistance map, and skip reasons to decide whether the trade is actually valid.',
+              },
+              {
+                step: '5. Apply workflow tools',
+                text: 'Use templates, score weights, playbooks, session lockout, and news events to keep your process consistent and defensive.',
+              },
+              {
+                step: '6. Journal the outcome',
+                text: 'Save the plan, tag mistakes, upload a screenshot, add lessons, and review analytics to improve over time.',
+              },
+            ].map((item) => (
+              <div key={item.step} className={`rounded-[1.1rem] border p-4 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white/70'}`}>
+                <p className="text-sm font-semibold">{item.step}</p>
+                <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{item.text}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <Card>
@@ -521,7 +766,7 @@ export default function OrderFlowCommander() {
                     onChange={(event) => setNewsRisk(event.target.checked)}
                     className="rounded"
                   />
-                  News risk active
+                  Manual news risk
                 </label>
               </div>
               <div className={`rounded-[1.1rem] border px-4 py-3 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white/70'}`}>
@@ -544,6 +789,24 @@ export default function OrderFlowCommander() {
               <div className={`rounded-[1.25rem] border p-4 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white/70'}`}>
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Grade</p>
                 <p className="mt-2 text-xl font-semibold">{plan.grade}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className={`rounded-[1.1rem] border p-4 ${isDark ? 'border-cyan-500/20 bg-cyan-500/10' : 'border-cyan-200 bg-cyan-50'}`}>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Scoring profile</p>
+                <p className="mt-1 text-sm font-semibold">{scoreWeightTotal} total points configured</p>
+                <p className={`mt-2 text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Minimum tradable score: {minimumScore}</p>
+              </div>
+              <div className={`rounded-[1.1rem] border p-4 ${isDark ? 'border-amber-500/20 bg-amber-500/10' : 'border-amber-200 bg-amber-50'}`}>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Session guardrails</p>
+                <p className="mt-1 text-sm font-semibold">{currentSessionRecords.length} trade(s), {currentSessionLosses} loss(es)</p>
+                <p className={`mt-2 text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{sessionLocked ? 'Session lockout active.' : 'Session still available.'}</p>
+              </div>
+              <div className={`rounded-[1.1rem] border p-4 ${effectiveNewsRisk ? isDark ? 'border-red-500/20 bg-red-500/10' : 'border-red-200 bg-red-50' : isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white/70'}`}>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">News radar</p>
+                <p className="mt-1 text-sm font-semibold">{activeNewsEvents.length} active event(s)</p>
+                <p className={`mt-2 text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{effectiveNewsRisk ? 'Risk is elevated by manual or scheduled news risk.' : 'No elevated news risk in the current window.'}</p>
               </div>
             </div>
           </CardContent>
@@ -601,7 +864,7 @@ export default function OrderFlowCommander() {
                       <span className="font-medium">{points}</span>
                     </div>
                     <div className={`h-2 overflow-hidden rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`}>
-                      <div className="h-full rounded-full bg-cyan-500" style={{ width: `${Math.min(100, (points / 25) * 100)}%` }} />
+                      <div className="h-full rounded-full bg-cyan-500" style={{ width: `${Math.min(100, (points / Math.max(scoreWeights[category as keyof CommanderScoreWeights], 1)) * 100)}%` }} />
                     </div>
                   </div>
                 ))}
@@ -650,6 +913,191 @@ export default function OrderFlowCommander() {
             <div className={`rounded-[1.15rem] border p-4 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white/70'}`}>
               <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Invalidation</p>
               <p className={`mt-2 text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{plan.invalidation}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Scoring Lab + Templates</CardTitle>
+            <CardDescription>Tune your scoring model and save reusable execution templates for specific sessions.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {(Object.keys(defaultScoreWeights) as Array<keyof CommanderScoreWeights>).map((key) => (
+                <div key={key}>
+                  <label className={`text-xs font-medium uppercase tracking-[0.16em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{key}</label>
+                  <Input
+                    type="number"
+                    value={scoreWeights[key]}
+                    onChange={(event) => setScoreWeights((previous) => ({ ...previous, [key]: Number(event.target.value) || 0 }))}
+                    className="mt-1 rounded-[1.1rem]"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_160px]">
+              <div>
+                <label className={`text-xs font-medium uppercase tracking-[0.16em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Minimum score</label>
+                <Input type="number" value={minimumScore} onChange={(event) => setMinimumScore(Number(event.target.value) || 70)} className="mt-1 rounded-[1.1rem]" />
+              </div>
+              <div className={`rounded-[1.1rem] border px-4 py-3 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white/70'}`}>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Weight total</p>
+                <p className="mt-1 text-lg font-semibold">{scoreWeightTotal}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 rounded-[1.15rem] border p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Apply template</p>
+                  <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Use a saved market posture instead of rebuilding context each session.</p>
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedTemplateId}
+                    onChange={(event) => setSelectedTemplateId(event.target.value)}
+                    className={`rounded-[1.1rem] border px-3 py-2 text-sm outline-none ${isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'}`}
+                  >
+                    {setupTemplates.map((template) => (
+                      <option key={template.id} value={template.id}>{template.name}</option>
+                    ))}
+                  </select>
+                  <Button variant="secondary" onClick={() => handleApplyTemplate(selectedTemplateId)} disabled={!selectedTemplateId}>Apply</Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Input value={templateForm.name} onChange={(event) => setTemplateForm((previous) => ({ ...previous, name: event.target.value }))} placeholder="Template name" className="rounded-[1.1rem]" />
+                <select value={templateForm.instrument} onChange={(event) => setTemplateForm((previous) => ({ ...previous, instrument: event.target.value as CommanderInstrument | 'Any' }))} className={`rounded-[1.1rem] border px-3 py-2 text-sm outline-none ${isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
+                  <option value="Any">Any instrument</option>
+                  <option value="MNQ">MNQ</option>
+                  <option value="MES">MES</option>
+                  <option value="GC">GC</option>
+                </select>
+                <select value={templateForm.session} onChange={(event) => setTemplateForm((previous) => ({ ...previous, session: event.target.value as CommanderSession | 'Any' }))} className={`rounded-[1.1rem] border px-3 py-2 text-sm outline-none ${isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
+                  <option value="Any">Any session</option>
+                  <option value="London">London</option>
+                  <option value="New York AM">New York AM</option>
+                  <option value="New York PM">New York PM</option>
+                  <option value="Asia">Asia</option>
+                </select>
+                <Input type="number" value={templateForm.minimumScore} onChange={(event) => setTemplateForm((previous) => ({ ...previous, minimumScore: event.target.value }))} placeholder="Template minimum score" className="rounded-[1.1rem]" />
+                <select value={templateForm.bias} onChange={(event) => setTemplateForm((previous) => ({ ...previous, bias: event.target.value as CommanderBias }))} className={`rounded-[1.1rem] border px-3 py-2 text-sm outline-none ${isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
+                  <option value="Bullish">Bullish</option>
+                  <option value="Bearish">Bearish</option>
+                  <option value="Neutral">Neutral</option>
+                </select>
+                <select value={templateForm.riskContext} onChange={(event) => setTemplateForm((previous) => ({ ...previous, riskContext: event.target.value as RiskContext }))} className={`rounded-[1.1rem] border px-3 py-2 text-sm outline-none ${isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
+                  <option value="Risk-On">Risk-On</option>
+                  <option value="Risk-Off">Risk-Off</option>
+                  <option value="Balanced">Balanced</option>
+                </select>
+              </div>
+              <label className={`flex items-center gap-2 rounded-[1.1rem] border px-3 py-2 text-sm ${isDark ? 'border-white/10 bg-white/5 text-slate-300' : 'border-slate-200 bg-white text-slate-700'}`}>
+                <input type="checkbox" checked={templateForm.newsRisk} onChange={(event) => setTemplateForm((previous) => ({ ...previous, newsRisk: event.target.checked }))} />
+                Template enables news risk by default
+              </label>
+              <textarea value={templateForm.notes} onChange={(event) => setTemplateForm((previous) => ({ ...previous, notes: event.target.value }))} placeholder="Template notes" rows={3} className={`w-full resize-none rounded-[1.15rem] border px-4 py-3 text-sm outline-none ${isDark ? 'border-white/10 bg-white/5 text-white placeholder:text-slate-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'}`} />
+              <Button onClick={handleSaveTemplate}><Plus size={16} />Save template</Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Playbooks + News Calendar</CardTitle>
+            <CardDescription>Capture setup-specific execution rules and a manual event calendar that can raise risk warnings.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className={`rounded-[1.15rem] border p-4 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white/70'}`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Saved playbooks</p>
+                  <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Keep execution checklists tied to actual setup types.</p>
+                </div>
+                <select value={selectedPlaybookId} onChange={(event) => setSelectedPlaybookId(event.target.value)} className={`rounded-[1.1rem] border px-3 py-2 text-sm outline-none ${isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
+                  {playbooks.map((playbook) => (
+                    <option key={playbook.id} value={playbook.id}>{playbook.name}</option>
+                  ))}
+                </select>
+              </div>
+              {selectedPlaybook && (
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge>{selectedPlaybook.setupType}</Badge>
+                    {selectedPlaybook.favorite && <Badge variant="outline">Favorite</Badge>}
+                  </div>
+                  <p className={`text-sm ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{selectedPlaybook.checklist}</p>
+                  <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{selectedPlaybook.executionNotes}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <Input value={playbookForm.name} onChange={(event) => setPlaybookForm((previous) => ({ ...previous, name: event.target.value }))} placeholder="Playbook name" className="rounded-[1.1rem]" />
+              <select value={playbookForm.setupType} onChange={(event) => setPlaybookForm((previous) => ({ ...previous, setupType: event.target.value as SetupPlaybook['setupType'] }))} className={`rounded-[1.1rem] border px-3 py-2 text-sm outline-none ${isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
+                <option value="Seller Absorption Long">Seller Absorption Long</option>
+                <option value="Buyer Absorption Short">Buyer Absorption Short</option>
+                <option value="Bullish Continuation">Bullish Continuation</option>
+                <option value="Bearish Continuation">Bearish Continuation</option>
+              </select>
+            </div>
+            <textarea value={playbookForm.checklist} onChange={(event) => setPlaybookForm((previous) => ({ ...previous, checklist: event.target.value }))} placeholder="Checklist" rows={3} className={`w-full resize-none rounded-[1.15rem] border px-4 py-3 text-sm outline-none ${isDark ? 'border-white/10 bg-white/5 text-white placeholder:text-slate-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'}`} />
+            <textarea value={playbookForm.executionNotes} onChange={(event) => setPlaybookForm((previous) => ({ ...previous, executionNotes: event.target.value }))} placeholder="Execution notes" rows={3} className={`w-full resize-none rounded-[1.15rem] border px-4 py-3 text-sm outline-none ${isDark ? 'border-white/10 bg-white/5 text-white placeholder:text-slate-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'}`} />
+            <label className={`flex items-center gap-2 rounded-[1.1rem] border px-3 py-2 text-sm ${isDark ? 'border-white/10 bg-white/5 text-slate-300' : 'border-slate-200 bg-white text-slate-700'}`}>
+              <input type="checkbox" checked={playbookForm.favorite} onChange={(event) => setPlaybookForm((previous) => ({ ...previous, favorite: event.target.checked }))} />
+              Mark as favorite
+            </label>
+            <Button onClick={handleSavePlaybook}><Plus size={16} />Save playbook</Button>
+
+            <div className={`rounded-[1.15rem] border p-4 ${isDark ? 'border-cyan-500/20 bg-cyan-500/10' : 'border-cyan-200 bg-cyan-50'}`}>
+              <div className="mb-3 flex items-center gap-2">
+                <CalendarDays size={16} />
+                <p className="text-sm font-semibold">Manual news-event calendar</p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Input value={newsEventForm.title} onChange={(event) => setNewsEventForm((previous) => ({ ...previous, title: event.target.value }))} placeholder="Event title" className="rounded-[1.1rem]" />
+                <Input type="datetime-local" value={newsEventForm.timestamp} onChange={(event) => setNewsEventForm((previous) => ({ ...previous, timestamp: event.target.value }))} className="rounded-[1.1rem]" />
+                <select value={newsEventForm.instrument} onChange={(event) => setNewsEventForm((previous) => ({ ...previous, instrument: event.target.value as CommanderInstrument | 'All' }))} className={`rounded-[1.1rem] border px-3 py-2 text-sm outline-none ${isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
+                  <option value="All">All instruments</option>
+                  <option value="MNQ">MNQ</option>
+                  <option value="MES">MES</option>
+                  <option value="GC">GC</option>
+                </select>
+                <select value={newsEventForm.session} onChange={(event) => setNewsEventForm((previous) => ({ ...previous, session: event.target.value as CommanderSession | 'All' }))} className={`rounded-[1.1rem] border px-3 py-2 text-sm outline-none ${isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
+                  <option value="All">All sessions</option>
+                  <option value="London">London</option>
+                  <option value="New York AM">New York AM</option>
+                  <option value="New York PM">New York PM</option>
+                  <option value="Asia">Asia</option>
+                </select>
+                <select value={newsEventForm.impact} onChange={(event) => setNewsEventForm((previous) => ({ ...previous, impact: event.target.value as NewsEvent['impact'] }))} className={`rounded-[1.1rem] border px-3 py-2 text-sm outline-none ${isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'}`}>
+                  <option value="Low">Low impact</option>
+                  <option value="Medium">Medium impact</option>
+                  <option value="High">High impact</option>
+                </select>
+              </div>
+              <textarea value={newsEventForm.notes} onChange={(event) => setNewsEventForm((previous) => ({ ...previous, notes: event.target.value }))} placeholder="Event notes" rows={2} className={`mt-3 w-full resize-none rounded-[1.15rem] border px-4 py-3 text-sm outline-none ${isDark ? 'border-white/10 bg-white/5 text-white placeholder:text-slate-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'}`} />
+              <div className="mt-3 flex flex-wrap gap-3">
+                <Button onClick={handleSaveNewsEvent}><Plus size={16} />Save event</Button>
+                <p className={`self-center text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{activeNewsEvents.length} event(s) currently inside the warning window.</p>
+              </div>
+              <div className="mt-4 space-y-2">
+                {newsEvents.slice(0, 5).map((event) => (
+                  <div key={event.id} className={`rounded-[1rem] border p-3 ${isDark ? 'border-white/10 bg-white/5' : 'border-white/70 bg-white/70'}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">{event.title}</p>
+                        <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{formatDate(event.timestamp)} {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+                      <Badge variant="outline">{event.impact}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -959,9 +1407,10 @@ export default function OrderFlowCommander() {
                 <AlertTriangle size={18} className="mt-0.5 flex-shrink-0 text-amber-500" />
                 <div className={`space-y-2 text-sm ${isDark ? 'text-amber-100' : 'text-amber-800'}`}>
                   <p>Hard rules: max 2 trades per session, stop after 2 losses, and no setups below 70 score.</p>
-                  {plan.score < 70 && <p>Current warning: setup score is below the tradable threshold.</p>}
+                  {plan.score < minimumScore && <p>Current warning: setup score is below the tradable threshold of {minimumScore}.</p>}
                   {plan.riskReward > 0 && plan.riskReward < 1.5 && <p>Current warning: risk/reward is below 1.5R.</p>}
-                  {newsRisk && <p>Current warning: news risk is active, so the plan should stay defensive or be skipped.</p>}
+                  {effectiveNewsRisk && <p>Current warning: news risk is active, so the plan should stay defensive or be skipped.</p>}
+                  {sessionLocked && <p>Current warning: session lockout is active because the session already hit the trade or loss limit.</p>}
                 </div>
               </div>
             </div>
@@ -994,6 +1443,23 @@ export default function OrderFlowCommander() {
               <Input type="number" value={journalDraft.profitLoss} onChange={(event) => setJournalDraft((previous) => ({ ...previous, profitLoss: event.target.value }))} placeholder="P/L" className="rounded-[1.1rem]" />
             </div>
 
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr]">
+              <label className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-[1.1rem] border px-4 py-3 text-sm font-medium ${isDark ? 'border-white/10 bg-white/5 text-slate-200' : 'border-slate-200 bg-white text-slate-700'}`}>
+                <Upload size={16} />
+                Upload screenshot
+                <input type="file" accept="image/*" className="hidden" onChange={handleScreenshotUpload} />
+              </label>
+              <Input value={journalDraft.screenshotAnnotation} onChange={(event) => setJournalDraft((previous) => ({ ...previous, screenshotAnnotation: event.target.value }))} placeholder="Screenshot annotation" className="rounded-[1.1rem]" />
+            </div>
+
+            {journalDraft.screenshotDataUrl && (
+              <div className={`rounded-[1.15rem] border p-4 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white/70'}`}>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">{journalDraft.screenshotName ?? 'Screenshot preview'}</p>
+                <img src={journalDraft.screenshotDataUrl} alt="Journal draft screenshot" className="mt-3 max-h-52 rounded-[1rem] border object-cover" />
+                {journalDraft.screenshotAnnotation && <p className={`mt-3 text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{journalDraft.screenshotAnnotation}</p>}
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-2">
               {mistakeTags.map((tag) => (
                 <Button
@@ -1023,7 +1489,7 @@ export default function OrderFlowCommander() {
             />
 
             <div className="flex flex-wrap gap-3">
-              <Button onClick={handleSaveJournal} disabled={!plan.entry || !plan.stop || !plan.tp1 || !plan.tp2 || plan.direction === 'No Trade'}>
+              <Button onClick={handleSaveJournal} disabled={!plan.entry || !plan.stop || !plan.tp1 || !plan.tp2 || plan.direction === 'No Trade' || sessionLocked || plan.score < minimumScore}>
                 <Target size={16} />
                 Save current plan to journal
               </Button>
@@ -1098,6 +1564,12 @@ export default function OrderFlowCommander() {
                 <div className="mt-4 space-y-3">
                   <p className={`text-sm ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{selectedJournalRecord.notes || 'No execution notes recorded.'}</p>
                   <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{selectedJournalRecord.lessons || 'No lessons recorded.'}</p>
+                  {selectedJournalRecord.screenshotDataUrl && (
+                    <div className={`rounded-[1rem] border p-3 ${isDark ? 'border-white/10 bg-white/5' : 'border-white/70 bg-white/60'}`}>
+                      <img src={selectedJournalRecord.screenshotDataUrl} alt={selectedJournalRecord.screenshotName ?? 'Journal screenshot'} className="max-h-56 rounded-[0.9rem] border object-cover" />
+                      {selectedJournalRecord.screenshotAnnotation && <p className={`mt-3 text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{selectedJournalRecord.screenshotAnnotation}</p>}
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     {selectedJournalRecord.mistakeTags.length > 0 ? selectedJournalRecord.mistakeTags.map((tag) => (
                       <Badge key={tag} variant="outline">{tag}</Badge>

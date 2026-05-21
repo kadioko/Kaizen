@@ -35,6 +35,16 @@ export type MistakeTag =
   | 'exited early'
   | 'good execution';
 export type LevelFilter = 'active' | 'inactive' | 'all';
+export type NewsImpact = 'Low' | 'Medium' | 'High';
+
+export interface CommanderScoreWeights {
+  context: number;
+  level: number;
+  delta: number;
+  alignment: number;
+  reward: number;
+  session: number;
+}
 
 export interface CommanderLevel {
   id: string;
@@ -94,6 +104,37 @@ export interface CommanderPlan {
   activeLevel: CommanderLevel | null;
 }
 
+export interface SetupTemplate {
+  id: string;
+  name: string;
+  instrument: CommanderInstrument | 'Any';
+  session: CommanderSession | 'Any';
+  bias: CommanderBias;
+  riskContext: RiskContext;
+  newsRisk: boolean;
+  minimumScore: number;
+  notes: string;
+}
+
+export interface SetupPlaybook {
+  id: string;
+  setupType: Exclude<SetupType, 'No Trade'>;
+  name: string;
+  checklist: string;
+  executionNotes: string;
+  favorite: boolean;
+}
+
+export interface NewsEvent {
+  id: string;
+  title: string;
+  timestamp: string;
+  instrument: CommanderInstrument | 'All';
+  session: CommanderSession | 'All';
+  impact: NewsImpact;
+  notes: string;
+}
+
 export interface JournalRecord {
   id: string;
   date: string;
@@ -111,6 +152,46 @@ export interface JournalRecord {
   notes: string;
   lessons: string;
   mistakeTags: MistakeTag[];
+  screenshotName?: string;
+  screenshotDataUrl?: string;
+  screenshotAnnotation?: string;
+}
+
+export interface JournalDraft {
+  exit: string;
+  resultR: string;
+  profitLoss: string;
+  notes: string;
+  lessons: string;
+  mistakeTags: MistakeTag[];
+  screenshotName?: string;
+  screenshotDataUrl?: string;
+  screenshotAnnotation: string;
+}
+
+export interface CommanderRiskInputs {
+  accountSize: string;
+  riskPercent: string;
+  tickValue: string;
+}
+
+export interface CommanderWorkspaceState {
+  selectedInstrument: CommanderInstrument;
+  session: CommanderSession;
+  bias: CommanderBias;
+  riskContext: RiskContext;
+  manualPrice: string;
+  newsRisk: boolean;
+  levels: CommanderLevel[];
+  orderFlowRows: OrderFlowRow[];
+  riskInputs: CommanderRiskInputs;
+  scoreWeights: CommanderScoreWeights;
+  minimumScore: number;
+  setupTemplates: SetupTemplate[];
+  playbooks: SetupPlaybook[];
+  newsEvents: NewsEvent[];
+  journalDraft: JournalDraft;
+  journalRecords: JournalRecord[];
 }
 
 export interface RiskMetrics {

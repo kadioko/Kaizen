@@ -1,5 +1,13 @@
 # OrderFlow Commander Roadmap
 
+Legend:
+
+- ✅ done
+- 🟡 in progress
+- ⏭️ next up
+- ⚪ not started
+- 🚧 dependent on earlier architecture work
+
 This roadmap turns the current `OrderFlow Commander` MVP into a real product plan. It is split into phases so we can move from a strong manual assistant to a durable, data-backed trading workspace without jumping too early into broker execution complexity.
 
 ## Product Goal
@@ -22,20 +30,29 @@ The repo currently includes:
 - manual level management
 - manual and CSV order-flow input
 - setup scoring and trade-plan generation
-- a basic risk engine
-- a lightweight journal workflow
+- a risk engine
+- a journal workflow
+- local persistence with a typed repository boundary
 - starter Supabase schema and sample CSV assets
 
-This is a good `manual MVP`, but it is still local-state driven and single-page in structure.
+This is a strong `manual MVP`, but it still lives inside one CRA route and is not yet cloud-backed.
 
 ## Progress Snapshot
 
-Recent progress against the backlog:
+- ✅ `P0` is effectively complete: versioned local persistence, extracted domain helpers, tested risk/setup logic, CSV validation, and clear/reset actions are live.
+- ✅ `P1` is effectively complete: inline level editing, session presets, score breakdowns, support/resistance mapping, sort/filter controls, plan copy, and journal detail review are in the app.
+- ✅ `P2` is functionally complete for MVP: analytics now cover setup performance, session performance, long vs short mix, mistake frequency, instrument heatmap, and rolling 10/30-trade summaries.
+- 🟡 `P3` is underway: Commander now has analytics modules plus a typed local repository boundary, but the UI still needs deeper feature extraction and a route-based product structure.
 
-- `P0` is largely in place: local versioned persistence, extracted domain helpers, tested risk/setup logic, stronger CSV parsing, and reset/clear actions are already live.
-- `P1` is mostly delivered: inline level editing, session presets, score breakdowns, nearest support and resistance mapping, order-flow sorting and filtering, plan copy, and journal detail review are in the app.
-- `P2` is now underway in-product: journal-driven analytics cover setup performance, session performance, long vs short mix, mistake frequency, instrument heatmap, and rolling 10/30 trade summaries.
-- `P3` has started but is not complete: Commander still lives inside the current CRA app, but analytics now uses a dedicated feature component plus a pure analytics domain module with tests.
+## Left To Build
+
+- ⏭️ extract `levels`, `trade plans`, and `journal` into dedicated feature components
+- ✅ add a Supabase-ready repository implementation beside the local repository
+- ⏭️ create a Commander route map that mirrors the future Next.js structure
+- ⚪ migrate Commander to a dedicated Next.js app structure
+- ⚪ add auth, row-level security, and durable cloud storage
+- ✅ add screenshot upload and chart annotation
+- ⚪ define external feed and platform adapter contracts
 
 ## Roadmap Phases
 
@@ -46,19 +63,19 @@ Make the current Commander surface dependable, persistent, and easier to use eve
 
 Scope:
 
-- move Commander state into dedicated local persistence
-- split the page into reusable modules
-- strengthen setup-detection logic
-- improve CSV parsing and validation
-- add clearer error states and empty states
-- improve trade-plan readability and journaling flow
+- ✅ move Commander state into dedicated local persistence
+- 🟡 split the page into reusable modules
+- ✅ strengthen setup-detection logic
+- ✅ improve CSV parsing and validation
+- 🟡 add clearer error states and empty states
+- 🟡 improve trade-plan readability and journaling flow
 
 Deliverables:
 
-- saved levels, order-flow rows, plans, and journal entries
-- cleaner component structure
-- more reliable setup scoring
-- better validation around bad inputs
+- ✅ saved levels, order-flow rows, plans, and journal entries
+- 🟡 cleaner component structure
+- ✅ more reliable setup scoring
+- ✅ better validation around bad inputs
 
 Success criteria:
 
@@ -73,17 +90,17 @@ Introduce a real persistence model and prepare the product for multi-device use.
 
 Scope:
 
-- migrate Commander entities to Supabase
-- add Supabase auth
-- connect level manager, order-flow rows, trade plans, and journal entries to database storage
-- add user scoping and row-level security
-- support screenshot storage
+- 🟡 migrate Commander entities to Supabase
+- 🟡 add Supabase auth
+- 🟡 connect level manager, order-flow rows, trade plans, and journal entries to database storage
+- 🟡 add user scoping and row-level security
+- 🟡 support screenshot storage
 
 Deliverables:
 
-- working Supabase-backed Commander workspace
-- authenticated user sessions
-- durable journal and plan history
+- 🟡 working Supabase-backed Commander workspace
+- 🟡 authenticated user sessions
+- 🟡 durable journal and plan history
 
 Success criteria:
 
@@ -93,26 +110,26 @@ Success criteria:
 ### Phase 3: Dedicated Commander App Structure
 
 Goal:
-Move from “Commander page in Kaizen” to “Commander product architecture.”
+Move from "Commander page in Kaizen" to "Commander product architecture."
 
 Scope:
 
-- migrate Commander to Next.js
-- create route-based areas for:
-  - dashboard
-  - levels
-  - order-flow input
-  - trade plans
-  - journal
-  - analytics
-  - settings
-- add shared layout and reusable Commander UI primitives
+- ⏭️ migrate Commander to Next.js
+- 🟡 create route-based feature ownership inside the current app first:
+  - ⏭️ dashboard
+  - ⏭️ levels
+  - ⏭️ order-flow input
+  - ⏭️ trade plans
+  - 🟡 journal
+  - ✅ analytics
+  - ⚪ settings
+- 🟡 add shared layout and reusable Commander UI primitives
 
 Deliverables:
 
-- Next.js Commander app shell
-- route-based product structure
-- clearer feature ownership
+- ⚪ Next.js Commander app shell
+- 🟡 route-based product structure
+- 🟡 clearer feature ownership
 
 Success criteria:
 
@@ -126,26 +143,26 @@ Turn journaling into feedback and measurable improvement.
 
 Scope:
 
-- build analytics page with Recharts
-- add performance breakdowns by:
-  - instrument
-  - direction
-  - session
-  - setup type
-  - mistake tag
-- calculate:
-  - total trades
-  - win rate
-  - average R
-  - profit factor
-  - best and worst setup types
-- add review summaries for recent sessions
+- ✅ build analytics page/section with Recharts
+- ✅ add performance breakdowns by:
+  - ✅ instrument
+  - ✅ direction
+  - ✅ session
+  - ✅ setup type
+  - ✅ mistake tag
+- ✅ calculate:
+  - ✅ total trades
+  - ✅ win rate
+  - ✅ average R
+  - ✅ profit factor
+  - ✅ best and worst setup types
+- 🟡 add review summaries for recent sessions
 
 Deliverables:
 
-- analytics dashboard
-- trade review summaries
-- mistake frequency tracking
+- ✅ analytics dashboard
+- 🟡 trade review summaries
+- ✅ mistake frequency tracking
 
 Success criteria:
 
@@ -158,18 +175,18 @@ Make the manual assistant faster and sharper without pretending to automate edge
 
 Scope:
 
-- better setup scoring explanations
-- confidence and quality breakdown by category
-- explainable “why valid” and “why skip” outputs
-- session-aware warnings
-- better news-risk workflow
-- optional watchlist presets by instrument and session
+- ✅ better setup scoring explanations
+- ✅ confidence and quality breakdown by category
+- ✅ explainable "why valid" and "why skip" outputs
+- 🟡 session-aware warnings
+- ⚪ better news-risk workflow
+- ⚪ optional watchlist presets by instrument and session
 
 Deliverables:
 
-- more transparent setup engine
-- better trader decision support
-- less friction in pre-trade planning
+- ✅ more transparent setup engine
+- 🟡 better trader decision support
+- 🟡 less friction in pre-trade planning
 
 Success criteria:
 
@@ -183,19 +200,19 @@ Prepare for future integrations without building broker execution too early.
 
 Scope:
 
-- define adapter boundaries for:
-  - NinjaTrader
-  - Quantower
-  - Sierra Chart
-  - future broker and data-feed connectors
-- define ingestion contracts for live order-flow feeds
-- separate domain logic from UI logic
+- ⚪ define adapter boundaries for:
+  - ⚪ NinjaTrader
+  - ⚪ Quantower
+  - ⚪ Sierra Chart
+  - ⚪ future broker and data-feed connectors
+- ⚪ define ingestion contracts for live order-flow feeds
+- 🟡 separate domain logic from UI logic
 
 Deliverables:
 
-- integration-ready architecture
-- typed ingestion contracts
-- adapter strategy docs
+- ⚪ integration-ready architecture
+- ⚪ typed ingestion contracts
+- ⚪ adapter strategy docs
 
 Success criteria:
 
@@ -204,68 +221,71 @@ Success criteria:
 
 ## Improvement Backlog
 
-Below is the practical improvement list, grouped by priority.
-
 ### P0: Immediate Improvements
 
-- persist Commander state locally with versioned storage keys
-- extract Commander types and logic into dedicated files
-- extract setup engine into pure functions with tests
-- extract risk engine into pure functions with tests
-- strengthen CSV parser to handle invalid headers, empty rows, and bad number values gracefully
-- add reset and clear actions for imported data and journal drafts
-- add active and inactive filtering for levels
+- ✅ persist Commander state locally with versioned storage keys
+- ✅ extract Commander types and logic into dedicated files
+- ✅ extract setup engine into pure functions with tests
+- ✅ extract risk engine into pure functions with tests
+- ✅ strengthen CSV parser to handle invalid headers, empty rows, and bad number values gracefully
+- ✅ add reset and clear actions for imported data and journal drafts
+- ✅ add active and inactive filtering for levels
 
 ### P1: High-Impact UX Improvements
 
-- add inline editing for levels instead of form reload only
-- add session presets for `London`, `New York AM`, `New York PM`, and `Asia`
-- add score breakdown card showing category points
-- add visual map of nearest support and resistance levels
-- add better table sorting and filtering for order-flow rows
-- add plan copy/export action
-- add journal entry detail view
+- ✅ add inline editing for levels instead of form reload only
+- ✅ add session presets for `London`, `New York AM`, `New York PM`, and `Asia`
+- ✅ add score breakdown card showing category points
+- ✅ add visual map of nearest support and resistance levels
+- ✅ add better table sorting and filtering for order-flow rows
+- ✅ add plan copy/export action
+- ✅ add journal entry detail view
 
 ### P2: Analytics Improvements
 
-- setup win-rate by setup type
-- session performance by time block
-- mistake-tag frequency chart
-- long vs short breakdown
-- instrument heatmap for `MNQ`, `MES`, and `GC`
-- rolling 10-trade and 30-trade quality summaries
+- ✅ setup win-rate by setup type
+- ✅ session performance by time block
+- ✅ mistake-tag frequency chart
+- ✅ long vs short breakdown
+- ✅ instrument heatmap for `MNQ`, `MES`, and `GC`
+- ✅ rolling 10-trade and 30-trade quality summaries
 
 ### P3: Product Architecture Improvements
 
-- move Commander into Next.js app router structure
-- replace local demo persistence with Supabase-backed repositories
-- add feature folders for `levels`, `orderflow`, `plans`, `journal`, and `analytics`
-- add test coverage for:
-  - setup scoring
-  - setup detection
-  - risk sizing
-  - CSV import mapping
+- ⚪ move Commander into Next.js app router structure
+- ✅ replace local demo persistence with repository-backed persistence that can later be swapped to Supabase
+- 🟡 add feature folders for `levels`, `orderflow`, `plans`, `journal`, and `analytics`
+- ✅ add test coverage for:
+  - ✅ setup scoring
+  - ✅ setup detection
+  - ✅ risk sizing
+  - ✅ CSV import mapping
 
 ### P4: Advanced Workflow Improvements
 
-- configurable setup templates
-- custom scoring weights
-- session lockout after 2 losses
-- manual news-event calendar entry
-- screenshot upload and chart annotation
-- saved playbooks by setup type
+- ✅ configurable setup templates
+- ✅ custom scoring weights
+- ✅ session lockout after 2 losses
+- ✅ manual news-event calendar entry
+- ✅ screenshot upload and chart annotation
+- ✅ saved playbooks by setup type
+
+## What I Would Build Next
+
+1. ⏭️ Extract the journal card into its own feature component and add recent-session review summaries.
+2. ⏭️ Extract the levels and trade-plan surfaces so the page becomes an orchestrator instead of a giant UI file.
+3. ⏭️ Add a Supabase repository implementation beside the local one, even if it is not wired live yet.
+4. ⏭️ Create a Commander route map that mirrors the future Next.js structure before the framework migration.
 
 ## Recommended Build Order
 
-If we want the fastest path to a serious usable product, the recommended sequence is:
-
-1. Persist Commander locally
-2. Extract logic and types from the page
-3. Add tests for scoring and risk
-4. Improve CSV and validation UX
-5. Add analytics from saved journal records
-6. Move Commander to Supabase
-7. Migrate Commander into a dedicated Next.js structure
+1. ✅ Persist Commander locally
+2. ✅ Extract logic and types from the page
+3. ✅ Add tests for scoring and risk
+4. ✅ Improve CSV and validation UX
+5. ✅ Add analytics from saved journal records
+6. ⏭️ Move Commander to Supabase
+7. ⏭️ Migrate Commander into a dedicated Next.js structure
 
 ## Risks To Avoid
 

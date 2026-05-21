@@ -1,5 +1,5 @@
 import { resistanceTypes, supportTypes } from './constants';
-import { CommanderBias, CommanderLevel, CommanderPlan, CommanderSession, OrderFlowRow, RiskContext, SetupType } from './types';
+import { CommanderBias, CommanderLevel, CommanderPlan, CommanderScoreWeights, CommanderSession, OrderFlowRow, RiskContext, SetupType } from './types';
 
 export interface BuildCommanderPlanInput {
   bias: CommanderBias;
@@ -11,6 +11,8 @@ export interface BuildCommanderPlanInput {
   rows: OrderFlowRow[];
   tickSize: number;
   proximityThreshold: number;
+  scoreWeights?: CommanderScoreWeights;
+  minimumScore?: number;
 }
 
 export function getGrade(score: number): CommanderPlan['grade'] {
@@ -21,6 +23,15 @@ export function getGrade(score: number): CommanderPlan['grade'] {
 }
 
 export function buildCommanderPlan(input: BuildCommanderPlanInput): CommanderPlan {
+  const scoreWeights = input.scoreWeights ?? {
+    context: 20,
+    level: 20,
+    delta: 25,
+    alignment: 15,
+    reward: 10,
+    session: 10,
+  };
+  const minimumScore = input.minimumScore ?? 70;
   const instrumentRows = [...input.rows].sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime());
   const latestRow = instrumentRows[0] ?? null;
   const activeLevels = input.levels.filter((level) => level.active);
@@ -117,14 +128,38 @@ export function buildCommanderPlan(input: BuildCommanderPlanInput): CommanderPla
   tp1 = entry !== null && stopDistance > 0 ? allTargets[0]?.price ?? (direction === 'Long' ? entry + stopDistance * 1.5 : entry - stopDistance * 1.5) : null;
   tp2 = entry !== null && stopDistance > 0 ? allTargets[1]?.price ?? (direction === 'Long' ? entry + stopDistance * 2.2 : entry - stopDistance * 2.2) : null;
   const riskReward = entry !== null && tp1 !== null && stopDistance > 0 ? Math.abs(tp1 - entry) / stopDistance : 0;
-  const contextPoints = direction === 'No Trade' ? 0 : input.bias === 'Neutral' ? 10 : (input.bias === 'Bullish' && direction === 'Long') || (input.bias === 'Bearish' && direction === 'Short') ? 20 : 0;
-  const levelPoints = nearestLevel && nearLevel ? 20 : 0;
-  const deltaPoints = setupType === 'Seller Absorption Long' || setupType === 'Buyer Absorption Short' ? 25 : setupType === 'Bullish Continuation' || setupType === 'Bearish Continuation' ? 18 : 0;
-  const alignmentPoints = alignmentDirection === direction ? 15 : alignmentDirection === 'Mixed' ? 0 : timeframeRows.length >= 2 ? 8 : 0;
-  const rewardPoints = riskReward >= 1.5 ? 10 : 0;
-  const sessionPoints = input.session === 'London' || input.session === 'New York AM' ? 10 : input.session === 'New York PM' ? 7 : 5;
+  const contextPoints =
+    direction === 'No Trade'
+      ? 0
+      : input.bias === 'Neutral'
+        ? scoreWeights.context * 0.5
+        : (input.bias === 'Bullish' && direction === 'Long') || (input.bias === 'Bearish' && direction === 'Short')
+          ? scoreWeights.context
+          : 0;
+  const levelPoints = nearestLevel && nearLevel ? scoreWeights.level : 0;
+  const deltaPoints =
+    setupType === 'Seller Absorption Long' || setupType === 'Buyer Absorption Short'
+      ? scoreWeights.delta
+      : setupType === 'Bullish Continuation' || setupType === 'Bearish Continuation'
+        ? scoreWeights.delta * 0.72
+        : 0;
+  const alignmentPoints =
+    alignmentDirection === direction
+      ? scoreWeights.alignment
+      : alignmentDirection === 'Mixed'
+        ? 0
+        : timeframeRows.length >= 2
+          ? scoreWeights.alignment * 0.53
+          : 0;
+  const rewardPoints = riskReward >= 1.5 ? scoreWeights.reward : 0;
+  const sessionPoints =
+    input.session === 'London' || input.session === 'New York AM'
+      ? scoreWeights.session
+      : input.session === 'New York PM'
+        ? scoreWeights.session * 0.7
+        : scoreWeights.session * 0.5;
   const scoreBreakdown = { context: contextPoints, level: levelPoints, delta: deltaPoints, alignment: alignmentPoints, reward: rewardPoints, session: sessionPoints };
-  const score = Math.min(100, Object.values(scoreBreakdown).reduce((sum, value) => sum + value, 0));
+  const score = Math.round(Math.min(100, Object.values(scoreBreakdown).reduce((sum, value) => sum + value, 0)));
   const grade = getGrade(score);
   let status: CommanderPlan['status'] = 'No Trade';
 
@@ -133,7 +168,7 @@ export function buildCommanderPlan(input: BuildCommanderPlanInput): CommanderPla
   else if (score >= 70) status = 'Setup Forming';
   else if (score >= 60) status = 'Watching';
 
-  if (score < 70 && direction !== 'No Trade') skipReasons.push('Setup score is below the hard 70-point trading threshold.');
+  if (score < minimumScore && direction !== 'No Trade') skipReasons.push(`Setup score is below the hard ${minimumScore}-point trading threshold.`);
   if (riskReward < 1.5 && direction !== 'No Trade') skipReasons.push('Risk/reward is below the 1.5R requirement.');
 
   return {

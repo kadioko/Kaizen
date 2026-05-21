@@ -41,6 +41,38 @@ It is not a financial-advice product and must not promise profits. Its role is t
 - journal trades
 - review performance
 
+### What OrderFlow Commander Is For
+
+OrderFlow Commander is meant to help a trader work through a disciplined execution process for `MNQ`, `MES`, and `GC`.
+
+It is for:
+
+- organizing session context before taking a trade
+- tracking key levels like demand, supply, VWAP, VAH, VAL, and prior references
+- recording order-flow evidence such as delta, volume, aggression, and response
+- generating structured trade plans with valid and skip reasons
+- enforcing risk and session rules
+- journaling execution quality and reviewing analytics afterward
+
+It is not for:
+
+- giving financial advice
+- guaranteeing profits
+- replacing independent risk management
+- auto-executing live broker trades
+
+### How To Use OrderFlow Commander
+
+Recommended workflow:
+
+1. Set the instrument, session, bias, risk context, and news risk.
+2. Add or review the key levels that matter for the current session.
+3. Enter order-flow rows manually or import CSV data for `M1`, `M3`, and `M5`.
+4. Review the detected setup, trade score, support and resistance map, and skip warnings.
+5. Use templates, playbooks, scoring controls, and news events to stay consistent.
+6. Save the trade to the journal with notes, mistakes, screenshots, and lessons.
+7. Review analytics to see what setups, sessions, and habits are helping or hurting.
+
 ## Current Stack In This Repo
 
 - Frontend: React 19 + TypeScript
@@ -479,6 +511,7 @@ The repo now includes starter assets for the OrderFlow Commander build:
 - Supabase schema draft: [docs/orderflow-commander-supabase-schema.sql](./docs/orderflow-commander-supabase-schema.sql)
 - Sample CSV import file: [public/orderflow-commander-sample.csv](./public/orderflow-commander-sample.csv)
 - Product roadmap and improvement plan: [docs/orderflow-commander-roadmap.md](./docs/orderflow-commander-roadmap.md)
+- Supabase client and repository scaffolding: `src/orderflow/supabase.ts` and `src/orderflow/supabaseRepository.ts`
 
 ## Local Development
 
@@ -492,6 +525,17 @@ The repo now includes starter assets for the OrderFlow Commander build:
 ```bash
 npm install
 ```
+
+### Environment Variables
+
+For the Supabase-backed Commander foundation, copy `.env.example` and provide:
+
+```bash
+REACT_APP_SUPABASE_URL=...
+REACT_APP_SUPABASE_ANON_KEY=...
+```
+
+These variables are used by the Commander Supabase client scaffold and are the starting point for authentication, durable storage, and screenshot uploads.
 
 ### Start The App
 

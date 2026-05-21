@@ -84,4 +84,30 @@ describe('buildCommanderPlan', () => {
     expect(plan.direction).toBe('No Trade');
     expect(plan.skipReasons).toContain('No order-flow rows are loaded for the selected instrument.');
   });
+
+  it('applies custom scoring weights and minimum score threshold', () => {
+    const plan = buildCommanderPlan({
+      bias: 'Bullish',
+      session: 'New York PM',
+      riskContext: 'Balanced',
+      newsRisk: false,
+      currentPrice: 100.5,
+      levels,
+      rows,
+      tickSize: 0.25,
+      proximityThreshold: 2,
+      minimumScore: 90,
+      scoreWeights: {
+        context: 10,
+        level: 10,
+        delta: 40,
+        alignment: 10,
+        reward: 10,
+        session: 5,
+      },
+    });
+
+    expect(plan.score).toBeLessThan(90);
+    expect(plan.skipReasons).toContain('Setup score is below the hard 90-point trading threshold.');
+  });
 });

@@ -55,8 +55,9 @@ export default function Layout() {
   const { isDark } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const pageMeta = pageDetails[location.pathname] ?? pageDetails['/'];
-  const workspaceLabel = location.pathname === '/orderflow-commander' ? 'OrderFlow Commander' : 'Kaizen Workspace';
+  const isCommander = location.pathname.startsWith('/orderflow-commander');
+  const pageMeta = isCommander ? pageDetails['/orderflow-commander'] : (pageDetails[location.pathname] ?? pageDetails['/']);
+  const workspaceLabel = isCommander ? 'OrderFlow Commander' : 'Kaizen Workspace';
 
   useEffect(() => {
     const body = document.body;

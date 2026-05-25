@@ -3,20 +3,20 @@ import { clearCommanderState, loadCommanderState, saveCommanderState } from './s
 import { CommanderWorkspaceState } from './types';
 
 export interface CommanderRepository {
-  load(): CommanderWorkspaceState;
-  save(state: CommanderWorkspaceState): void;
-  reset(): CommanderWorkspaceState;
+  load(): Promise<CommanderWorkspaceState>;
+  save(state: CommanderWorkspaceState): Promise<void>;
+  reset(): Promise<CommanderWorkspaceState>;
 }
 
 export function createLocalCommanderRepository(): CommanderRepository {
   return {
-    load() {
+    async load() {
       return loadCommanderState(createDefaultCommanderState());
     },
-    save(state) {
+    async save(state) {
       saveCommanderState(state);
     },
-    reset() {
+    async reset() {
       clearCommanderState();
       return createDefaultCommanderState();
     },

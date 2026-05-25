@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { commanderViews } from '../../orderflow/navigation';
 
 const workspaceItems = [
   { to: '/', icon: LayoutDashboard, label: 'Kaizen', detail: 'Multi-market training OS' },
@@ -43,7 +44,7 @@ interface SidebarProps {
 export default function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
   const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
-  const isCommander = location.pathname === '/orderflow-commander';
+  const isCommander = location.pathname.startsWith('/orderflow-commander');
 
   return (
     <aside className={`flex h-full w-80 max-w-[88vw] flex-col border-r ${isDark ? 'border-white/10 bg-slate-950/90' : 'border-white/60 bg-white/80'} backdrop-blur-2xl`}>
@@ -186,6 +187,60 @@ export default function Sidebar({ isMobileOpen = false, onClose }: SidebarProps)
                   )}
                 </NavLink>
               ))}
+            </div>
+          </>
+        )}
+
+        {isCommander && (
+          <>
+            <p className={`mb-3 mt-6 px-3 text-[11px] font-semibold uppercase tracking-[0.28em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              Commander Views
+            </p>
+            <div className="space-y-2">
+              {commanderViews.map(({ slug, label, detail }) => {
+                const to = slug === 'dashboard' ? '/orderflow-commander' : `/orderflow-commander/${slug}`;
+                return (
+                  <NavLink
+                    key={slug}
+                    to={to}
+                    end={slug === 'dashboard'}
+                    onClick={isMobileOpen ? onClose : undefined}
+                    className={({ isActive }) =>
+                      `group flex items-center gap-3 rounded-[1.25rem] px-3 py-3 transition-all duration-200 ${
+                        isActive
+                          ? isDark
+                            ? 'bg-white/8 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                            : 'bg-white text-navy-900 shadow-[0_18px_40px_-28px_rgba(15,58,107,0.75)]'
+                          : isDark
+                            ? 'text-slate-400 hover:bg-white/5 hover:text-white'
+                            : 'text-slate-600 hover:bg-white/70 hover:text-navy-900'
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <div className={`flex h-11 w-11 items-center justify-center rounded-2xl transition-colors ${
+                          isActive
+                            ? isDark
+                              ? 'bg-gold-400/15 text-gold-300'
+                              : 'bg-navy-50 text-navy-800'
+                            : isDark
+                              ? 'bg-white/5 text-slate-400 group-hover:text-white'
+                              : 'bg-slate-100 text-slate-500 group-hover:text-navy-800'
+                        }`}>
+                          <Waves size={18} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">{label}</p>
+                          <p className={`truncate text-xs ${isActive ? (isDark ? 'text-slate-400' : 'text-slate-500') : 'text-slate-400 dark:text-slate-500'}`}>
+                            {detail}
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </NavLink>
+                );
+              })}
             </div>
           </>
         )}

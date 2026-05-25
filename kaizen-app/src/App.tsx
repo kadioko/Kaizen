@@ -35,7 +35,7 @@ function App() {
                 <Route path="coach" element={<Coach />} />
                 <Route path="learn" element={<Learn />} />
                 <Route path="pricing" element={<Pricing />} />
-                <Route path="orderflow-commander" element={<OrderFlowCommander />} />
+                <Route path="orderflow-commander/*" element={<OrderFlowCommander />} />
               </Route>
             </Routes>
             <TwentyFirstToolbar config={{ plugins: [ReactPlugin] }} />

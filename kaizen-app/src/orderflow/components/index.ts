@@ -1,4 +1,7 @@
 export { CommanderAnalyticsSection } from './CommanderAnalyticsSection';
+export { CommanderGuide } from './CommanderGuide';
+export { CommanderHero } from './CommanderHero';
+export { CommanderSubnav } from './CommanderSubnav';
 export { JournalCard } from './JournalCard';
 export { LevelsManager } from './LevelsManager';
 export { OrderFlowInput } from './OrderFlowInput';

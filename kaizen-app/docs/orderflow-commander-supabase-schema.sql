@@ -41,7 +41,23 @@ create table if not exists commander_orderflow_rows (
   aggressive_sellers boolean,
   price_continued_after_aggression boolean,
   notes text,
+  source text not null default 'manual' check (source in ('manual', 'csv')),
   created_at timestamptz not null default now()
+);
+
+create table if not exists commander_workspaces (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  selected_instrument text not null check (selected_instrument in ('MNQ', 'MES', 'GC')),
+  session_name text not null,
+  bias text not null check (bias in ('Bullish', 'Bearish', 'Neutral')),
+  risk_context text not null check (risk_context in ('Risk-On', 'Risk-Off', 'Balanced')),
+  manual_price numeric(12, 4),
+  news_risk boolean not null default false,
+  minimum_score integer not null default 70,
+  risk_inputs jsonb not null default '{}'::jsonb,
+  score_weights jsonb not null default '{}'::jsonb,
+  journal_draft jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists commander_trade_plans (
@@ -145,6 +161,7 @@ alter table commander_levels enable row level security;
 alter table commander_orderflow_rows enable row level security;
 alter table commander_trade_plans enable row level security;
 alter table commander_journal_entries enable row level security;
+alter table commander_workspaces enable row level security;
 alter table commander_setup_templates enable row level security;
 alter table commander_playbooks enable row level security;
 alter table commander_news_events enable row level security;
@@ -166,6 +183,9 @@ create policy "trade_plans_manage_own" on commander_trade_plans
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "journal_manage_own" on commander_journal_entries
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "workspaces_manage_own" on commander_workspaces
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "templates_manage_own" on commander_setup_templates

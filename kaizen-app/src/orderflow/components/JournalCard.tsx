@@ -31,6 +31,7 @@ interface JournalCardProps {
   onClearDraft: () => void;
   toggleMistakeTag: (tag: MistakeTag) => void;
   onScreenshotUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  journalStatus?: string;
   recentSessionSummary?: {
     todayTrades: number;
     todayResultR: number;
@@ -55,6 +56,7 @@ export function JournalCard({
   onClearDraft,
   toggleMistakeTag,
   onScreenshotUpload,
+  journalStatus,
   recentSessionSummary,
 }: JournalCardProps) {
   const surfaceClass = isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white/70';
@@ -200,6 +202,7 @@ export function JournalCard({
             Clear draft
           </Button>
         </div>
+        {journalStatus && <p className={`text-sm ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>{journalStatus}</p>}
 
         {/* Journal Records List */}
         <div className="space-y-3">

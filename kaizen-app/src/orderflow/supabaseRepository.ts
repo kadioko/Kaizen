@@ -96,7 +96,7 @@ export function createSupabaseCommanderRepository(): CommanderRepository {
         exit_price: record.exit,
         result_r: record.resultR,
         profit_loss: record.profitLoss,
-        screenshot_path: record.screenshotName ?? null,
+        screenshot_path: record.screenshotPath ?? record.screenshotName ?? null,
         screenshot_annotation: record.screenshotAnnotation ?? null,
         mistake_tags: record.mistakeTags,
         notes: record.notes,
@@ -202,6 +202,7 @@ function mapOrderFlowRow(row: Record<string, unknown>): OrderFlowRow {
 }
 
 function mapJournalEntry(row: Record<string, unknown>): JournalRecord {
+  const screenshotPath = row.screenshot_path ? String(row.screenshot_path) : undefined;
   return {
     id: String(row.id),
     date: String(row.trade_date),
@@ -216,7 +217,8 @@ function mapJournalEntry(row: Record<string, unknown>): JournalRecord {
     exit: Number(row.exit_price),
     resultR: Number(row.result_r ?? 0),
     profitLoss: Number(row.profit_loss ?? 0),
-    screenshotName: row.screenshot_path ? String(row.screenshot_path) : undefined,
+    screenshotPath,
+    screenshotName: screenshotPath ? screenshotPath.split('/').pop() : undefined,
     screenshotAnnotation: row.screenshot_annotation ? String(row.screenshot_annotation) : undefined,
     notes: String(row.notes ?? ''),
     lessons: String(row.lessons ?? ''),
@@ -293,6 +295,13 @@ export async function uploadCommanderScreenshot(userId: string, fileName: string
   return data.path;
 }
 
+export async function getCommanderScreenshotUrl(path: string) {
+  const client = assertSupabase();
+  const { data, error } = await client.storage.from('commander-screenshots').createSignedUrl(path, 60 * 60);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
 export async function hydrateCommanderWorkspace(userId: string): Promise<CommanderWorkspaceState> {
   const client = assertSupabase();
   const defaultState = createDefaultCommanderState();
@@ -306,6 +315,20 @@ export async function hydrateCommanderWorkspace(userId: string): Promise<Command
     client.from('commander_playbooks').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
     client.from('commander_news_events').select('*').eq('user_id', userId).order('event_time', { ascending: true }),
   ]);
+
+  const mappedJournalEntries = journalEntries.error || !journalEntries.data
+    ? defaultState.journalRecords
+    : await Promise.all(journalEntries.data.map(async (row) => {
+      const entry = mapJournalEntry(row as Record<string, unknown>);
+      if (!entry.screenshotPath) return entry;
+
+      try {
+        const signedUrl = await getCommanderScreenshotUrl(entry.screenshotPath);
+        return { ...entry, screenshotDataUrl: signedUrl };
+      } catch {
+        return entry;
+      }
+    }));
 
   return {
     ...defaultState,
@@ -321,7 +344,7 @@ export async function hydrateCommanderWorkspace(userId: string): Promise<Command
     journalDraft: (workspace.data?.journal_draft as CommanderWorkspaceState['journalDraft']) ?? defaultState.journalDraft,
     levels: levels.error || !levels.data ? defaultState.levels : levels.data.map((row) => mapLevel(row as Record<string, unknown>)),
     orderFlowRows: rows.error || !rows.data ? defaultState.orderFlowRows : rows.data.map((row) => mapOrderFlowRow(row as Record<string, unknown>)),
-    journalRecords: journalEntries.error || !journalEntries.data ? defaultState.journalRecords : journalEntries.data.map((row) => mapJournalEntry(row as Record<string, unknown>)),
+    journalRecords: mappedJournalEntries,
     setupTemplates: templates.error || !templates.data ? defaultState.setupTemplates : templates.data.map((row) => mapTemplate(row as Record<string, unknown>)),
     playbooks: playbooks.error || !playbooks.data ? defaultState.playbooks : playbooks.data.map((row) => mapPlaybook(row as Record<string, unknown>)),
     newsEvents: newsEvents.error || !newsEvents.data ? defaultState.newsEvents : newsEvents.data.map((row) => mapNewsEvent(row as Record<string, unknown>)),

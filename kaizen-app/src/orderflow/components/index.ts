@@ -1,4 +1,5 @@
 export { CommanderAnalyticsSection } from './CommanderAnalyticsSection';
+export { CommanderAuthGate } from './CommanderAuthGate';
 export { CommanderGuide } from './CommanderGuide';
 export { CommanderHero } from './CommanderHero';
 export { CommanderSubnav } from './CommanderSubnav';

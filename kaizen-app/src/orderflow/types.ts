@@ -163,6 +163,7 @@ export interface JournalRecord {
   notes: string;
   lessons: string;
   mistakeTags: MistakeTag[];
+  screenshotPath?: string;
   screenshotName?: string;
   screenshotDataUrl?: string;
   screenshotAnnotation?: string;

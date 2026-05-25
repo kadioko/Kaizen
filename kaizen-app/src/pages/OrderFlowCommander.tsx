@@ -7,13 +7,13 @@ import { instrumentConfig, resistanceTypes, supportTypes } from '../orderflow/co
 import { buildCommanderAnalytics } from '../orderflow/analytics';
 import { createDefaultCommanderState, defaultJournalDraft } from '../orderflow/defaults';
 import { parseCsvRows } from '../orderflow/csv';
-import { CommanderAnalyticsSection, CommanderGuide, CommanderHero, CommanderSubnav, JournalCard, LevelsManager, OrderFlowInput, PlaybooksNewsCard, RiskCard, ScoringLab, SessionContextCard, TradePlans } from '../orderflow/components';
+import { CommanderAnalyticsSection, CommanderAuthGate, CommanderGuide, CommanderHero, CommanderSubnav, JournalCard, LevelsManager, OrderFlowInput, PlaybooksNewsCard, RiskCard, ScoringLab, SessionContextCard, TradePlans } from '../orderflow/components';
 import { commanderViews, CommanderViewSlug } from '../orderflow/navigation';
 import { createLocalCommanderRepository } from '../orderflow/repository';
 import { calculateRiskMetrics } from '../orderflow/riskEngine';
 import { buildCommanderPlan } from '../orderflow/setupEngine';
 import { hasSupabaseEnv } from '../orderflow/supabase';
-import { createSupabaseCommanderRepository } from '../orderflow/supabaseRepository';
+import { createSupabaseCommanderRepository, getCommanderSession, signInWithEmailPassword, signOutCommander, signUpWithEmailPassword, uploadCommanderScreenshot } from '../orderflow/supabaseRepository';
 import { CommanderBias, CommanderInstrument, CommanderSession, CommanderWorkspaceState, JournalRecord, LevelFilter, LevelType, MistakeTag, NewsEvent, RiskContext, SetupPlaybook, Timeframe } from '../orderflow/types';
 
 type OrderFlowSortKey = 'timestamp' | 'timeframe' | 'close' | 'delta' | 'volume' | 'source';
@@ -27,6 +27,13 @@ export default function OrderFlowCommander() {
   const repository = useMemo(() => (hasSupabaseEnv ? createSupabaseCommanderRepository() : createLocalCommanderRepository()), []);
   const [workspace, setWorkspace] = useState<CommanderWorkspaceState>(emptyState);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [commanderUserEmail, setCommanderUserEmail] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(!hasSupabaseEnv);
   const hydratedRef = useRef(false);
   const [editingLevelId, setEditingLevelId] = useState<string | null>(null);
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('active');
@@ -38,6 +45,7 @@ export default function OrderFlowCommander() {
   const [orderFlowFilter, setOrderFlowFilter] = useState<OrderFlowFilter>('all');
   const [selectedJournalRecordId, setSelectedJournalRecordId] = useState<string | null>(null);
   const [copySummary, setCopySummary] = useState('');
+  const [journalStatus, setJournalStatus] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [selectedPlaybookId, setSelectedPlaybookId] = useState('');
   const [templateForm, setTemplateForm] = useState({ name: '', instrument: 'Any' as CommanderInstrument | 'Any', session: 'Any' as CommanderSession | 'Any', bias: 'Neutral' as CommanderBias, riskContext: 'Balanced' as RiskContext, newsRisk: false, minimumScore: '70', notes: '' });
@@ -46,28 +54,50 @@ export default function OrderFlowCommander() {
 
   useEffect(() => {
     let cancelled = false;
-    repository.load().then((loaded) => {
-      if (cancelled) return;
-      setWorkspace(loaded);
-      setLevelForm((previous) => ({ ...previous, instrument: loaded.selectedInstrument }));
-      setFlowForm((previous) => ({ ...previous, instrument: loaded.selectedInstrument }));
-      setSelectedTemplateId(loaded.setupTemplates[0]?.id ?? '');
-      setSelectedPlaybookId(loaded.playbooks[0]?.id ?? '');
-      hydratedRef.current = true;
-      setIsLoading(false);
-    }).catch(() => {
-      hydratedRef.current = true;
-      setIsLoading(false);
-    });
+    const loadWorkspace = async () => {
+      try {
+        if (hasSupabaseEnv) {
+          const sessionResult = await getCommanderSession();
+          const session = sessionResult.data.session;
+          if (!cancelled) {
+            setIsAuthenticated(Boolean(session));
+            setCommanderUserEmail(session?.user?.email ?? '');
+          }
+          if (!session) {
+            if (!cancelled) {
+              hydratedRef.current = true;
+              setIsLoading(false);
+            }
+            return;
+          }
+        }
+
+        const loaded = await repository.load();
+        if (cancelled) return;
+        setWorkspace(loaded);
+        setLevelForm((previous) => ({ ...previous, instrument: loaded.selectedInstrument }));
+        setFlowForm((previous) => ({ ...previous, instrument: loaded.selectedInstrument }));
+        setSelectedTemplateId(loaded.setupTemplates[0]?.id ?? '');
+        setSelectedPlaybookId(loaded.playbooks[0]?.id ?? '');
+      } catch {
+        if (!cancelled) setAuthError('Commander could not connect to Supabase yet. Check auth and schema deployment.');
+      } finally {
+        if (!cancelled) {
+          hydratedRef.current = true;
+          setIsLoading(false);
+        }
+      }
+    };
+    loadWorkspace();
     return () => {
       cancelled = true;
     };
   }, [repository]);
 
   useEffect(() => {
-    if (!hydratedRef.current) return;
+    if (!hydratedRef.current || (hasSupabaseEnv && !isAuthenticated)) return;
     repository.save(workspace).catch(() => undefined);
-  }, [repository, workspace]);
+  }, [isAuthenticated, repository, workspace]);
 
   const activeView = useMemo<CommanderViewSlug | null>(() => {
     const segment = location.pathname.split('/')[2];
@@ -163,9 +193,56 @@ export default function OrderFlowCommander() {
     }).catch(() => undefined);
   };
 
-  const handleSaveJournal = () => {
+  const handleAuthSubmit = async () => {
+    setIsAuthLoading(true);
+    setAuthError('');
+    try {
+      const result = authMode === 'signin'
+        ? await signInWithEmailPassword(authEmail, authPassword)
+        : await signUpWithEmailPassword(authEmail, authPassword);
+      if (result.error) throw result.error;
+      const sessionResult = await getCommanderSession();
+      setIsAuthenticated(Boolean(sessionResult.data.session));
+      setCommanderUserEmail(sessionResult.data.session?.user?.email ?? authEmail);
+      const loaded = await repository.load();
+      setWorkspace(loaded);
+      setSelectedTemplateId(loaded.setupTemplates[0]?.id ?? '');
+      setSelectedPlaybookId(loaded.playbooks[0]?.id ?? '');
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Authentication failed.');
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOutCommander();
+    setIsAuthenticated(false);
+    setCommanderUserEmail('');
+    setWorkspace(createDefaultCommanderState());
+  };
+
+  const handleSaveJournal = async () => {
     if (!plan.entry || !plan.stop || !plan.tp1 || !plan.tp2 || plan.direction === 'No Trade') return;
-    const record: JournalRecord = { id: generateId(), date: new Date().toISOString(), instrument: workspace.selectedInstrument, session: workspace.session, setupType: plan.setupType, direction: plan.direction, entry: plan.entry, stop: plan.stop, tp1: plan.tp1, tp2: plan.tp2, exit: Number(workspace.journalDraft.exit) || plan.tp1, resultR: Number(workspace.journalDraft.resultR) || 0, profitLoss: Number(workspace.journalDraft.profitLoss) || 0, notes: workspace.journalDraft.notes, lessons: workspace.journalDraft.lessons, mistakeTags: workspace.journalDraft.mistakeTags, screenshotName: workspace.journalDraft.screenshotName, screenshotDataUrl: workspace.journalDraft.screenshotDataUrl, screenshotAnnotation: workspace.journalDraft.screenshotAnnotation };
+    let screenshotPath = workspace.journalDraft.screenshotName;
+    let screenshotDataUrl = workspace.journalDraft.screenshotDataUrl;
+
+    if (hasSupabaseEnv && isAuthenticated && workspace.journalDraft.screenshotName && workspace.journalDraft.screenshotDataUrl) {
+      try {
+        const sessionResult = await getCommanderSession();
+        const userId = sessionResult.data.session?.user?.id;
+        if (userId) {
+          screenshotPath = await uploadCommanderScreenshot(userId, workspace.journalDraft.screenshotName, workspace.journalDraft.screenshotDataUrl);
+          setJournalStatus('Screenshot uploaded to Supabase Storage and journal saved.');
+        }
+      } catch {
+        setJournalStatus('Journal saved, but the screenshot upload did not complete.');
+      }
+    } else {
+      setJournalStatus('Journal saved locally.');
+    }
+
+    const record: JournalRecord = { id: generateId(), date: new Date().toISOString(), instrument: workspace.selectedInstrument, session: workspace.session, setupType: plan.setupType, direction: plan.direction, entry: plan.entry, stop: plan.stop, tp1: plan.tp1, tp2: plan.tp2, exit: Number(workspace.journalDraft.exit) || plan.tp1, resultR: Number(workspace.journalDraft.resultR) || 0, profitLoss: Number(workspace.journalDraft.profitLoss) || 0, notes: workspace.journalDraft.notes, lessons: workspace.journalDraft.lessons, mistakeTags: workspace.journalDraft.mistakeTags, screenshotPath, screenshotName: workspace.journalDraft.screenshotName, screenshotDataUrl, screenshotAnnotation: workspace.journalDraft.screenshotAnnotation };
     patchWorkspace({ journalRecords: [record, ...workspace.journalRecords], journalDraft: defaultJournalDraft });
   };
 
@@ -185,10 +262,35 @@ export default function OrderFlowCommander() {
 
   if (activeView === null) return <Navigate to="/orderflow-commander" replace />;
   if (isLoading) return <div className={`rounded-[1.5rem] border p-8 text-sm ${isDark ? 'border-white/10 bg-white/5 text-slate-300' : 'border-slate-200 bg-white/70 text-slate-600'}`}>Loading Commander workspace...</div>;
+  if (hasSupabaseEnv && !isAuthenticated) {
+    return (
+      <div className="space-y-6">
+        <CommanderHero selectedInstrument={workspace.selectedInstrument} plan={plan} onReset={handleResetCommanderState} />
+        <CommanderAuthGate
+          isDark={isDark}
+          email={authEmail}
+          password={authPassword}
+          mode={authMode}
+          loading={isAuthLoading}
+          error={authError}
+          onEmailChange={setAuthEmail}
+          onPasswordChange={setAuthPassword}
+          onModeChange={setAuthMode}
+          onSubmit={handleAuthSubmit}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <CommanderHero selectedInstrument={workspace.selectedInstrument} plan={plan} onReset={handleResetCommanderState} />
+      {hasSupabaseEnv && commanderUserEmail && (
+        <div className={`flex items-center justify-between rounded-[1.2rem] border px-4 py-3 text-sm ${isDark ? 'border-white/10 bg-white/5 text-slate-300' : 'border-slate-200 bg-white/70 text-slate-700'}`}>
+          <p>Connected to Supabase as <span className="font-semibold">{commanderUserEmail}</span>.</p>
+          <button type="button" onClick={handleSignOut} className={`rounded-full px-3 py-1 text-xs font-medium ${isDark ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-700'}`}>Sign out</button>
+        </div>
+      )}
       <CommanderSubnav activeView={activeView} />
 
       {activeView === 'dashboard' && (
@@ -213,7 +315,7 @@ export default function OrderFlowCommander() {
         </div>
       )}
 
-      {activeView === 'journal' && <JournalCard isDark={isDark} analytics={analytics} journalDraft={workspace.journalDraft} setJournalDraft={(value) => patchWorkspace({ journalDraft: typeof value === 'function' ? value(workspace.journalDraft) : value })} journalRecords={workspace.journalRecords} selectedJournalRecordId={selectedJournalRecordId} setSelectedJournalRecordId={setSelectedJournalRecordId} selectedJournalRecord={selectedJournalRecord} plan={plan} minimumScore={workspace.minimumScore} sessionLocked={sessionLocked} onSaveJournal={handleSaveJournal} onClearDraft={() => patchWorkspace({ journalDraft: defaultJournalDraft })} toggleMistakeTag={toggleMistakeTag} onScreenshotUpload={handleScreenshotUpload} recentSessionSummary={recentSessionSummary} />}
+      {activeView === 'journal' && <JournalCard isDark={isDark} analytics={analytics} journalDraft={workspace.journalDraft} setJournalDraft={(value) => patchWorkspace({ journalDraft: typeof value === 'function' ? value(workspace.journalDraft) : value })} journalRecords={workspace.journalRecords} selectedJournalRecordId={selectedJournalRecordId} setSelectedJournalRecordId={setSelectedJournalRecordId} selectedJournalRecord={selectedJournalRecord} plan={plan} minimumScore={workspace.minimumScore} sessionLocked={sessionLocked} onSaveJournal={handleSaveJournal} onClearDraft={() => patchWorkspace({ journalDraft: defaultJournalDraft })} toggleMistakeTag={toggleMistakeTag} onScreenshotUpload={handleScreenshotUpload} recentSessionSummary={recentSessionSummary} journalStatus={journalStatus} />}
 
       {activeView === 'analytics' && <CommanderAnalyticsSection analytics={analytics} isDark={isDark} />}
 

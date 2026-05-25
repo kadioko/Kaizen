@@ -89,7 +89,7 @@ create table if not exists commander_journal_entries (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   trade_date date not null,
-  instrument text not null check (instrument in ('MNQ', 'MES', 'GC')),
+  instrument text not null check (instrument in ('EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD', 'XAUUSD', 'MNQ', 'MES', 'GC')),
   session_name text not null,
   setup_type text not null,
   direction text not null check (direction in ('Long', 'Short')),
@@ -206,3 +206,16 @@ create policy "score_profiles_manage_own" on commander_score_profiles
 insert into storage.buckets (id, name, public)
 values ('commander-screenshots', 'commander-screenshots', false)
 on conflict (id) do nothing;
+
+create policy "commander_screenshots_manage_own"
+on storage.objects
+for all
+using (bucket_id = 'commander-screenshots' and auth.uid()::text = (storage.foldername(name))[1])
+with check (bucket_id = 'commander-screenshots' and auth.uid()::text = (storage.foldername(name))[1]);
+
+grant usage on schema public to anon, authenticated, service_role;
+grant all on all tables in schema public to anon, authenticated, service_role;
+grant all on all sequences in schema public to anon, authenticated, service_role;
+grant all on all routines in schema public to anon, authenticated, service_role;
+
+notify pgrst, 'reload schema';

@@ -5,6 +5,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { formatDate, generateId } from '../../utils/helpers';
+import { commanderInstrumentOptions } from '../constants';
 import { CommanderInstrument, CommanderSession, NewsEvent, SetupPlaybook } from '../types';
 
 interface PlaybookFormState {
@@ -240,9 +241,9 @@ export function PlaybooksNewsCard({
               }`}
             >
               <option value="All">All instruments</option>
-              <option value="MNQ">MNQ</option>
-              <option value="MES">MES</option>
-              <option value="GC">GC</option>
+              {commanderInstrumentOptions.map((instrument) => (
+                <option key={instrument} value={instrument}>{instrument}</option>
+              ))}
             </select>
             <select
               value={newsEventForm.session}

@@ -3,7 +3,7 @@
 Kaizen is now structured as a two-area trading product workspace:
 
 - `Kaizen`: the current multi-market paper-trading and review platform
-- `OrderFlow Commander`: a new dedicated futures order-flow execution assistant area for MNQ, MES, and GC
+- `OrderFlow Commander`: a dedicated order-flow execution assistant area now focused on forex majors and `XAUUSD`
 
 The current repository still runs the existing React + TypeScript app, and now includes a documented in-app area for `OrderFlow Commander` so the product direction is visible while we build toward the larger architecture.
 
@@ -25,13 +25,20 @@ Kaizen is the active application area in this repository today. It focuses on:
 
 ### OrderFlow Commander
 
-OrderFlow Commander is a new product area added to the app and docs. Its purpose is to become a manual and semi-automated execution assistant for futures order-flow scalping.
+OrderFlow Commander is a new product area added to the app and docs. Its purpose is to become a manual and semi-automated execution assistant for order-flow trading with a primary focus on forex majors and `XAUUSD`.
 
-It is designed to help a trader analyze:
+Its main focus is:
 
-- `MNQ`
-- `MES`
-- `GC`
+- `EURUSD`
+- `GBPUSD`
+- `USDJPY`
+- `USDCHF`
+- `AUDUSD`
+- `USDCAD`
+- `NZDUSD`
+- `XAUUSD`
+
+It can still support futures-style workflows as a secondary use case, but the main Commander experience is now being shaped around forex and gold execution.
 
 It is not a financial-advice product and must not promise profits. Its role is to help the user:
 
@@ -43,13 +50,13 @@ It is not a financial-advice product and must not promise profits. Its role is t
 
 ### What OrderFlow Commander Is For
 
-OrderFlow Commander is meant to help a trader work through a disciplined execution process for `MNQ`, `MES`, and `GC`.
+OrderFlow Commander is meant to help a trader work through a disciplined execution process for forex majors and `XAUUSD`.
 
 It is for:
 
-- organizing session context before taking a trade
+- organizing London, New York, and Asia session context before taking a trade
 - tracking key levels like demand, supply, VWAP, VAH, VAL, and prior references
-- recording order-flow evidence such as delta, volume, aggression, and response
+- recording order-flow evidence such as delta, volume, aggression, and response for FX and gold setups
 - generating structured trade plans with valid and skip reasons
 - enforcing risk and session rules
 - journaling execution quality and reviewing analytics afterward
@@ -71,7 +78,7 @@ Recommended workflow:
 4. Review the detected setup, trade score, support and resistance map, and skip warnings.
 5. Use templates, playbooks, scoring controls, and news events to stay consistent.
 6. Save the trade to the journal with notes, mistakes, screenshots, and lessons.
-7. Review analytics to see what setups, sessions, and habits are helping or hurting.
+7. Review analytics to see what setups, sessions, and habits are helping or hurting in forex majors and `XAUUSD`.
 
 ## Current Stack In This Repo
 

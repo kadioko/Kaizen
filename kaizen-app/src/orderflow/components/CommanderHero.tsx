@@ -21,10 +21,10 @@ export function CommanderHero({ selectedInstrument, plan, onReset }: CommanderHe
               OrderFlow Commander
             </div>
             <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold leading-tight sm:text-5xl">
-              Manual futures execution assistant for MNQ, MES, and GC.
+              Order-flow execution assistant for forex majors and XAUUSD.
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
-              Structure context, mark levels, track order-flow evidence, generate trade plans, size risk, and review execution without pretending to be a broker tool.
+              Structure context, mark levels, track order-flow evidence, generate trade plans, size risk, and review execution for `EURUSD`, `GBPUSD`, `USDJPY`, `USDCHF`, `AUDUSD`, `USDCAD`, `NZDUSD`, and `XAUUSD`.
             </p>
             <button
               type="button"

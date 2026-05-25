@@ -47,7 +47,7 @@ const pageDetails: Record<string, { title: string; description: string }> = {
   },
   '/orderflow-commander': {
     title: 'OrderFlow Commander',
-    description: 'A structured futures order-flow execution workspace for MNQ, MES, and GC.',
+    description: 'A structured order-flow execution workspace for forex majors and XAUUSD.',
   },
 };
 

@@ -21,7 +21,7 @@ import { commanderViews } from '../../orderflow/navigation';
 
 const workspaceItems = [
   { to: '/', icon: LayoutDashboard, label: 'Kaizen', detail: 'Multi-market training OS' },
-  { to: '/orderflow-commander', icon: Waves, label: 'OrderFlow Commander', detail: 'Futures order-flow execution' },
+  { to: '/orderflow-commander', icon: Waves, label: 'OrderFlow Commander', detail: 'Forex majors and XAUUSD flow' },
 ];
 
 const kaizenNavItems = [
@@ -76,13 +76,13 @@ export default function Sidebar({ isMobileOpen = false, onClose }: SidebarProps)
           </div>
           <p className="text-lg font-semibold leading-tight">
             {isCommander
-              ? 'Turn order-flow context into structured futures execution plans.'
+              ? 'Turn order-flow context into structured forex and gold execution plans.'
               : 'Build calmer execution, cleaner reviews, and repeatable growth.'}
           </p>
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-2xl bg-white/10 px-3 py-3">
               <p className="text-xs uppercase tracking-[0.22em] text-white/60">Focus</p>
-              <p className="mt-1 font-semibold">{isCommander ? 'Futures flow' : 'Risk first'}</p>
+              <p className="mt-1 font-semibold">{isCommander ? 'FX + XAUUSD' : 'Risk first'}</p>
             </div>
             <div className="rounded-2xl bg-white/10 px-3 py-3">
               <p className="text-xs uppercase tracking-[0.22em] text-white/60">Mode</p>

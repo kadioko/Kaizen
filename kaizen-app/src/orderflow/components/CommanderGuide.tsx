@@ -17,12 +17,12 @@ export function CommanderGuide({ isDark }: CommanderGuideProps) {
           <div className={`rounded-[1.15rem] border p-4 ${isDark ? 'border-cyan-500/20 bg-cyan-500/10' : 'border-cyan-200 bg-cyan-50'}`}>
             <p className="text-sm font-semibold">Primary purpose</p>
             <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-              OrderFlow Commander helps you organize market context for `MNQ`, `MES`, and `GC`, evaluate setup quality at key levels, apply risk rules, and keep a disciplined journal around execution.
+              OrderFlow Commander helps you organize market context for forex majors like `EURUSD`, `GBPUSD`, `USDJPY`, and for `XAUUSD`, while still supporting futures workflows when needed.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {[
-              'Plan around supply, demand, VWAP, value, and session references.',
+              'Plan around supply, demand, VWAP, value, and session references across forex majors and gold.',
               'Record delta, volume, aggression, and continuation behavior.',
               'Generate a readable trade plan with valid and skip reasons.',
               'Enforce minimum score, risk/reward, and session discipline.',

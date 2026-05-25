@@ -1,4 +1,15 @@
-export type CommanderInstrument = 'MNQ' | 'MES' | 'GC';
+export type CommanderInstrument =
+  | 'EURUSD'
+  | 'GBPUSD'
+  | 'USDJPY'
+  | 'USDCHF'
+  | 'AUDUSD'
+  | 'USDCAD'
+  | 'NZDUSD'
+  | 'XAUUSD'
+  | 'MNQ'
+  | 'MES'
+  | 'GC';
 export type CommanderSession = 'London' | 'New York AM' | 'New York PM' | 'Asia';
 export type CommanderBias = 'Bullish' | 'Bearish' | 'Neutral';
 export type CommanderStatus = 'No Trade' | 'Watching' | 'Setup Forming' | 'Ready' | 'In Trade' | 'Trade Complete';

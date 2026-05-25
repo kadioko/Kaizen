@@ -1,6 +1,9 @@
 -- OrderFlow Commander starter schema
 -- Educational planning artifact for the future Next.js + Supabase build
 
+-- Supported Commander focus instruments:
+-- EURUSD, GBPUSD, USDJPY, USDCHF, AUDUSD, USDCAD, NZDUSD, XAUUSD
+
 create extension if not exists "pgcrypto";
 
 create table if not exists profiles (
@@ -13,7 +16,7 @@ create table if not exists profiles (
 create table if not exists commander_levels (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  instrument text not null check (instrument in ('MNQ', 'MES', 'GC')),
+  instrument text not null check (instrument in ('EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD', 'XAUUSD', 'MNQ', 'MES', 'GC')),
   level_type text not null,
   price numeric(12, 4) not null,
   strength_score integer not null check (strength_score between 1 and 5),
@@ -27,7 +30,7 @@ create table if not exists commander_orderflow_rows (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   timestamp_utc timestamptz not null,
-  instrument text not null check (instrument in ('MNQ', 'MES', 'GC')),
+  instrument text not null check (instrument in ('EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD', 'XAUUSD', 'MNQ', 'MES', 'GC')),
   timeframe text not null check (timeframe in ('M1', 'M3', 'M5')),
   open numeric(12, 4) not null,
   high numeric(12, 4) not null,
@@ -47,7 +50,7 @@ create table if not exists commander_orderflow_rows (
 
 create table if not exists commander_workspaces (
   user_id uuid primary key references auth.users(id) on delete cascade,
-  selected_instrument text not null check (selected_instrument in ('MNQ', 'MES', 'GC')),
+  selected_instrument text not null check (selected_instrument in ('EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD', 'XAUUSD', 'MNQ', 'MES', 'GC')),
   session_name text not null,
   bias text not null check (bias in ('Bullish', 'Bearish', 'Neutral')),
   risk_context text not null check (risk_context in ('Risk-On', 'Risk-Off', 'Balanced')),
@@ -63,7 +66,7 @@ create table if not exists commander_workspaces (
 create table if not exists commander_trade_plans (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  instrument text not null check (instrument in ('MNQ', 'MES', 'GC')),
+  instrument text not null check (instrument in ('EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD', 'XAUUSD', 'MNQ', 'MES', 'GC')),
   session_name text not null,
   bias text not null check (bias in ('Bullish', 'Bearish', 'Neutral')),
   status text not null,

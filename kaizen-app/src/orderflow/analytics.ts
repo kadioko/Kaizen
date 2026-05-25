@@ -57,7 +57,7 @@ const setupTypes: SetupType[] = [
 ];
 
 const sessions: CommanderSession[] = ['London', 'New York AM', 'New York PM', 'Asia'];
-const instruments: CommanderInstrument[] = ['MNQ', 'MES', 'GC'];
+const instruments: CommanderInstrument[] = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD', 'XAUUSD', 'MNQ', 'MES', 'GC'];
 const directions: CommanderDirection[] = ['Long', 'Short'];
 
 function buildBucket(label: string, records: JournalRecord[]): CommanderPerformanceBucket {

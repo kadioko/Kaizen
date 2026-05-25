@@ -196,7 +196,7 @@ export default function OrderFlowCommander() {
           <CommanderGuide isDark={isDark} />
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
             <SessionContextCard isDark={isDark} selectedInstrument={workspace.selectedInstrument} setSelectedInstrument={(instrument) => patchWorkspace({ selectedInstrument: instrument })} session={workspace.session} setSession={(session) => patchWorkspace({ session })} bias={workspace.bias} setBias={(bias) => patchWorkspace({ bias })} riskContext={workspace.riskContext} setRiskContext={(riskContext) => patchWorkspace({ riskContext })} manualPrice={workspace.manualPrice} setManualPrice={(manualPrice) => patchWorkspace({ manualPrice })} newsRisk={workspace.newsRisk} setNewsRisk={(newsRisk) => patchWorkspace({ newsRisk })} plan={plan} currentPrice={currentPrice} scoreWeights={workspace.scoreWeights} minimumScore={workspace.minimumScore} scoreWeightTotal={scoreWeightTotal} currentSessionRecords={currentSessionRecords} currentSessionLosses={currentSessionLosses} sessionLocked={sessionLocked} activeNewsEvents={activeNewsEvents} effectiveNewsRisk={effectiveNewsRisk} onSyncInstrument={syncInstrument} />
-            <TradePlans isDark={isDark} plan={plan} nearestSupport={nearestSupport} nearestResistance={nearestResistance} currentPrice={currentPrice} scoreWeights={workspace.scoreWeights} minimumScore={workspace.minimumScore} newsRisk={effectiveNewsRisk} sessionLocked={sessionLocked} onCopyPlan={handleCopyPlan} copySummary={copySummary} />
+            <TradePlans isDark={isDark} selectedInstrument={workspace.selectedInstrument} plan={plan} nearestSupport={nearestSupport} nearestResistance={nearestResistance} currentPrice={currentPrice} scoreWeights={workspace.scoreWeights} minimumScore={workspace.minimumScore} newsRisk={effectiveNewsRisk} sessionLocked={sessionLocked} onCopyPlan={handleCopyPlan} copySummary={copySummary} />
           </div>
           <RiskCard isDark={isDark} riskInputs={workspace.riskInputs} setRiskInputs={(value) => patchWorkspace({ riskInputs: typeof value === 'function' ? value(workspace.riskInputs) : value })} riskMetrics={riskMetrics} />
         </>
@@ -208,7 +208,7 @@ export default function OrderFlowCommander() {
 
       {activeView === 'plans' && (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <TradePlans isDark={isDark} plan={plan} nearestSupport={nearestSupport} nearestResistance={nearestResistance} currentPrice={currentPrice} scoreWeights={workspace.scoreWeights} minimumScore={workspace.minimumScore} newsRisk={effectiveNewsRisk} sessionLocked={sessionLocked} onCopyPlan={handleCopyPlan} copySummary={copySummary} />
+          <TradePlans isDark={isDark} selectedInstrument={workspace.selectedInstrument} plan={plan} nearestSupport={nearestSupport} nearestResistance={nearestResistance} currentPrice={currentPrice} scoreWeights={workspace.scoreWeights} minimumScore={workspace.minimumScore} newsRisk={effectiveNewsRisk} sessionLocked={sessionLocked} onCopyPlan={handleCopyPlan} copySummary={copySummary} />
           <RiskCard isDark={isDark} riskInputs={workspace.riskInputs} setRiskInputs={(value) => patchWorkspace({ riskInputs: typeof value === 'function' ? value(workspace.riskInputs) : value })} riskMetrics={riskMetrics} />
         </div>
       )}

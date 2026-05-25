@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
+import { commanderInstrumentOptions, instrumentConfig } from '../constants';
 import { CommanderBias, CommanderInstrument, CommanderPlan, CommanderScoreWeights, CommanderSession, RiskContext } from '../types';
 
 interface SessionContextCardProps {
@@ -61,6 +62,7 @@ export function SessionContextCard({
   onSyncInstrument,
 }: SessionContextCardProps) {
   const surfaceClass = isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white/70';
+  const decimals = instrumentConfig[selectedInstrument].priceDecimals;
 
   return (
     <Card>
@@ -80,9 +82,9 @@ export function SessionContextCard({
                 isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'
               }`}
             >
-              <option value="MNQ">MNQ</option>
-              <option value="MES">MES</option>
-              <option value="GC">GC</option>
+              {commanderInstrumentOptions.map((instrument) => (
+                <option key={instrument} value={instrument}>{instrument}</option>
+              ))}
             </select>
           </div>
           <div>
@@ -180,7 +182,7 @@ export function SessionContextCard({
           </div>
           <div className={`rounded-[1.25rem] border p-4 ${surfaceClass}`}>
             <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Current price</p>
-            <p className="mt-2 text-xl font-semibold">{currentPrice.toFixed(selectedInstrument === 'GC' ? 2 : 2)}</p>
+            <p className="mt-2 text-xl font-semibold">{currentPrice.toFixed(decimals)}</p>
           </div>
           <div className={`rounded-[1.25rem] border p-4 ${surfaceClass}`}>
             <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Grade</p>

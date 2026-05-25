@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { generateId } from '../../utils/helpers';
+import { commanderInstrumentOptions } from '../constants';
 import { defaultScoreWeights } from '../defaults';
 import { CommanderBias, CommanderInstrument, CommanderScoreWeights, CommanderSession, RiskContext, SetupTemplate } from '../types';
 
@@ -176,9 +177,9 @@ export function ScoringLab({
               }`}
             >
               <option value="Any">Any instrument</option>
-              <option value="MNQ">MNQ</option>
-              <option value="MES">MES</option>
-              <option value="GC">GC</option>
+              {commanderInstrumentOptions.map((instrument) => (
+                <option key={instrument} value={instrument}>{instrument}</option>
+              ))}
             </select>
             <select
               value={templateForm.session}

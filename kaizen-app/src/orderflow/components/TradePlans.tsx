@@ -3,11 +3,13 @@ import { Copy } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AlertTriangle } from 'lucide-react';
+import { instrumentConfig } from '../constants';
 import { CommanderLevel, CommanderPlan, CommanderScoreWeights } from '../types';
 
 interface TradePlansProps {
   isDark: boolean;
   plan: CommanderPlan;
+  selectedInstrument: keyof typeof instrumentConfig;
   nearestSupport: CommanderLevel | null;
   nearestResistance: CommanderLevel | null;
   currentPrice: number;
@@ -22,6 +24,7 @@ interface TradePlansProps {
 export function TradePlans({
   isDark,
   plan,
+  selectedInstrument,
   nearestSupport,
   nearestResistance,
   currentPrice,
@@ -34,7 +37,7 @@ export function TradePlans({
 }: TradePlansProps) {
   const surfaceClass = isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white/70';
 
-  const decimals = 2;
+  const decimals = instrumentConfig[selectedInstrument].priceDecimals;
 
   return (
     <Card>

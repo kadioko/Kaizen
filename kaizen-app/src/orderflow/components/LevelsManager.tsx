@@ -5,7 +5,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { generateId } from '../../utils/helpers';
-import { levelTypes } from '../constants';
+import { commanderInstrumentOptions, instrumentConfig, levelTypes } from '../constants';
 import { CommanderInstrument, CommanderLevel, LevelFilter, LevelType } from '../types';
 
 interface LevelFormState {
@@ -98,7 +98,7 @@ export function LevelsManager({
     onSyncInstrument(level.instrument);
   };
 
-  const decimals = selectedInstrument === 'GC' ? 2 : 2;
+  const decimals = instrumentConfig[selectedInstrument].priceDecimals;
 
   return (
     <Card>
@@ -118,9 +118,9 @@ export function LevelsManager({
               isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'
             }`}
           >
-            <option value="MNQ">MNQ</option>
-            <option value="MES">MES</option>
-            <option value="GC">GC</option>
+            {commanderInstrumentOptions.map((instrument) => (
+              <option key={instrument} value={instrument}>{instrument}</option>
+            ))}
           </select>
           <Input
             type="number"

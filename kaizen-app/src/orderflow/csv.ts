@@ -2,7 +2,7 @@ import { generateId } from '../utils/helpers';
 import { CommanderInstrument, OrderFlowRow, Timeframe } from './types';
 
 const requiredHeaders = ['timestamp', 'instrument', 'timeframe', 'open', 'high', 'low', 'close', 'delta', 'delta_change', 'volume', 'cumulative_delta'];
-const validInstruments: CommanderInstrument[] = ['MNQ', 'MES', 'GC'];
+const validInstruments: CommanderInstrument[] = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD', 'XAUUSD', 'MNQ', 'MES', 'GC'];
 const validTimeframes: Timeframe[] = ['M1', 'M3', 'M5'];
 
 export interface CsvParseResult {

@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { generateId } from '../../utils/helpers';
+import { commanderInstrumentOptions, instrumentConfig } from '../constants';
 import { CommanderInstrument, OrderFlowRow, Timeframe } from '../types';
 
 type OrderFlowSortKey = 'timestamp' | 'timeframe' | 'close' | 'delta' | 'volume' | 'source';
@@ -93,6 +94,7 @@ export function OrderFlowInput({
       return String(leftValue).localeCompare(String(rightValue)) * direction;
     });
   }, [instrumentRows, orderFlowFilter, orderFlowSortKey, orderFlowSortDirection]);
+  const decimals = instrumentConfig[selectedInstrument].priceDecimals;
 
   const handleFlowSubmit = () => {
     const row: OrderFlowRow = {
@@ -143,9 +145,9 @@ export function OrderFlowInput({
               isDark ? 'border-white/10 bg-white/5 text-white' : 'border-slate-200 bg-white text-slate-900'
             }`}
           >
-            <option value="MNQ">MNQ</option>
-            <option value="MES">MES</option>
-            <option value="GC">GC</option>
+            {commanderInstrumentOptions.map((instrument) => (
+              <option key={instrument} value={instrument}>{instrument}</option>
+            ))}
           </select>
           <select
             value={flowForm.timeframe}
@@ -322,7 +324,7 @@ export function OrderFlowInput({
                     {new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </td>
                   <td className="px-2 py-2">{row.timeframe}</td>
-                  <td className="px-2 py-2 text-right">{row.close.toFixed(2)}</td>
+                  <td className="px-2 py-2 text-right">{row.close.toFixed(decimals)}</td>
                   <td className={`px-2 py-2 text-right ${row.delta >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                     {row.delta}
                   </td>

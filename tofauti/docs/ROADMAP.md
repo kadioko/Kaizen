@@ -17,7 +17,6 @@
 
 ## Active Blockers
 
-- Apply the Supabase migration with a valid Supabase access credential.
 - Configure a persistent FastAPI host and set its URL in Vercel.
 - Add verified Databento/CME credentials and exchange entitlements before enabling a live provider.
 

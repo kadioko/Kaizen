@@ -4,9 +4,11 @@
 
 Supabase hosts PostgreSQL, Auth, and row-level security. It does not host the long-running FastAPI worker/WebSocket service. Deploy the API as the Docker service in `render.yaml` (or an equivalent persistent container host), then deploy `apps/web` to Vercel.
 
-## 1. Apply the Supabase Migration
+## 1. Supabase Schema
 
-From this directory, link the intended project and apply `supabase/migrations/20260912193000_create_tofauti_market_intelligence.sql`:
+The TOFAUTI schema is deployed to the Kaizen Supabase project as the tracked migration `create_tofauti_market_intelligence`. It owns 13 `tofauti_`-prefixed tables and six RLS policies, without modifying K OG tables.
+
+For a new environment, link the intended project and apply `supabase/migrations/20260912193000_create_tofauti_market_intelligence.sql`:
 
 ```bash
 supabase login

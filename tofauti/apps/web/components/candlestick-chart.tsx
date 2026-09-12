@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { ColorType, createChart } from 'lightweight-charts';
-import type { MarketSnapshot } from '@tofauti/shared-types';
+import type { MarketSnapshot } from '@/lib/types';
 
 export function CandlestickChart({ snapshot }: { snapshot: MarketSnapshot }) {
   const containerRef = useRef<HTMLDivElement>(null);

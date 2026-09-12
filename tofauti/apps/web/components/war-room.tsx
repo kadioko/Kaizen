@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, Bot, CircleDotDashed, Gauge, Radio, ShieldAlert, Zap } from 'lucide-react';
-import type { LayerState, MarketSnapshot } from '@tofauti/shared-types';
+import type { LayerState, MarketSnapshot } from '@/lib/types';
 import { CandlestickChart } from './candlestick-chart';
 import { TerminalNav } from './terminal-nav';
 import { browserDemoSnapshot } from '@/lib/browser-demo';

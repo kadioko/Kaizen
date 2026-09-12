@@ -1,4 +1,4 @@
-import type { Direction, LayerState, MarketSnapshot, Strength, WarRoomEvent, WarRoomState } from '@tofauti/shared-types';
+import type { Direction, LayerState, MarketSnapshot, Strength, WarRoomEvent, WarRoomState } from '@/lib/types';
 
 type Scenario = 'bearish_liquidity_sweep' | 'bullish_reversal' | 'mixed' | 'macro_divergence' | 'full_alignment';
 

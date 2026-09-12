@@ -1,4 +1,4 @@
-import type { MarketSnapshot } from '@tofauti/shared-types';
+import type { MarketSnapshot } from '@/lib/types';
 
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL;
 

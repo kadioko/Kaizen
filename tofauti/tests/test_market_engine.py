@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import asyncio
 
 from tofauti_market_engine.engines import AlignmentEngine, LiquidityEngine, MacroEngine, OrderFlowEngine, StructureEngine
-from tofauti_market_engine.models import DemoScenario, Direction, Setup, WarRoomState
+from tofauti_market_engine.models import DemoScenario, Direction, LayerState, Setup, Strength, WarRoomState
 from tofauti_market_engine.outcomes import evaluate_setup_outcome
 from tofauti_market_engine.providers import MockMacroDataProvider, MockMarketDataProvider
 from tofauti_market_engine.runtime import WarRoomRuntime
@@ -38,6 +38,19 @@ def test_alignment_reports_macro_divergence():
     alignment = AlignmentEngine().build(macro, structure, flow, liquidity)
     assert alignment.state in {"MACRO_DIVERGENCE", "PARTIAL_BULLISH_ALIGNMENT", "MIXED"}
     assert "macro" in alignment.evidence
+
+
+def test_alignment_flags_price_layers_against_bearish_macro_as_divergence():
+    macro = LayerState(direction=Direction.BEARISH, score=-32, strength=Strength.MODERATE, summary="Mock macro")
+    structure = LayerState(direction=Direction.BULLISH, score=58, strength=Strength.MODERATE, summary="Bullish structure")
+    flow = LayerState(direction=Direction.BULLISH, score=66, strength=Strength.STRONG, summary="Bullish flow")
+    liquidity = LayerState(direction=Direction.NEUTRAL, score=0, strength=Strength.WEAK, summary="No sweep")
+
+    alignment = AlignmentEngine().build(macro, structure, flow, liquidity)
+
+    assert alignment.state == "MACRO_DIVERGENCE"
+    assert alignment.direction == Direction.BULLISH
+    assert alignment.strength == Strength.WEAK
 
 
 def test_liquidity_engine_detects_bearish_sweep_with_evidence():

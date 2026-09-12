@@ -185,7 +185,7 @@ class AlignmentEngine:
             state = "FULL_BEARISH_ALIGNMENT"
         elif bullish >= 3 and macro.direction == Direction.BULLISH:
             state = "FULL_BULLISH_ALIGNMENT"
-        elif bearish >= 2 and macro.direction == Direction.BULLISH:
+        elif (bearish >= 2 and macro.direction == Direction.BULLISH) or (bullish >= 2 and macro.direction == Direction.BEARISH):
             state = "MACRO_DIVERGENCE"
         elif bearish >= 2:
             state = "PARTIAL_BEARISH_ALIGNMENT"

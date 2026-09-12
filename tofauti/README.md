@@ -1,0 +1,80 @@
+# TOFAUTI
+
+TOFAUTI is an original, explainable market-intelligence war room. It translates normalized market data into order flow, structure, liquidity, macro, alignment, and timestamped state transitions. It does not issue broker orders, promise outcomes, or present calculated strength as a winning probability.
+
+## V0.1 Scope
+
+- Instruments: `GC` Gold Futures and `MGC` Micro Gold Futures.
+- Data: deterministic mock data only, clearly labeled in the UI.
+- Calculated display states: `BULLISH`, `BEARISH`, `NEUTRAL` and `WEAK`, `MODERATE`, `STRONG`.
+- Core sequence: tick -> order flow -> structure -> liquidity -> macro -> alignment -> War Room event -> setup record.
+
+## Run Locally
+
+Prerequisites: Node 24+, Python 3.12+, and optionally Docker.
+
+```bash
+cd tofauti
+copy .env.example .env
+npm install
+pip install -r apps/api/requirements.txt
+```
+
+Start the API in one terminal:
+
+```bash
+npm run dev:api
+```
+
+Start the web app in another terminal:
+
+```bash
+npm run dev:web
+```
+
+Open `http://localhost:3001/war-room`. The API runs on `http://localhost:8000`, and the UI receives snapshots through `ws://localhost:8000/ws/market/GC`.
+
+## Public Demo Deployment
+
+The web app can be deployed independently to Vercel for a shareable demo. Without `NEXT_PUBLIC_API_URL`, the deployed app runs an explicitly labelled deterministic browser replay so the War Room remains usable without exposing a local API. It is not live market data and it does not use a broker.
+
+Set `NEXT_PUBLIC_API_URL` only after deploying the FastAPI/WebSocket service to a public, secure host. The UI will then use the hosted engine rather than the browser replay.
+
+## Demo Mode
+
+`DEMO_MODE=true` is the default. The `MockMarketDataProvider` is deterministic and supports these replayable scenarios:
+
+- `bearish_liquidity_sweep`
+- `bullish_reversal`
+- `mixed`
+- `macro_divergence`
+- `full_alignment`
+
+Use the developer controls in War Room to reset a scenario. The bearish sweep follows supply approach -> buy-side sweep -> seller pressure -> full bearish alignment -> confirmed setup -> continuation. This is simulated behavior for application testing, not a historical replay or trading recommendation.
+
+## Optional Local Infrastructure
+
+PostgreSQL starts with the supplied schema; Redis is optional and is not needed for demo mode.
+
+```bash
+docker compose -f infrastructure/docker-compose.yml up -d
+docker compose -f infrastructure/docker-compose.yml --profile cache up -d
+```
+
+## Verification
+
+```bash
+python -m pytest tests -q
+npm run typecheck:web
+npm run lint:web
+npm run build:web
+```
+
+## Product Boundaries
+
+- The market engine owns calculations and stores raw evidence for every displayed state.
+- `MockAIAnalyst` is available at `POST /api/analyst/query` and only explains the supplied current snapshot. It cannot create market data, fill missing data, or generate an unsupported signal.
+- `MockMarketDataProvider` is intentionally interchangeable with a future provider implementation. The intended next integration prompt is: **“Replace MockMarketDataProvider with Databento/CME data without changing the market-engine interfaces.”**
+- A Vercel preview without a configured hosted API deliberately uses the browser replay; it must never be described as a live market feed.
+
+Read [Architecture](docs/ARCHITECTURE.md), [Market Engine](docs/MARKET_ENGINE.md), [Data Providers](docs/DATA_PROVIDERS.md), and [Roadmap](docs/ROADMAP.md) before adding a live feed.

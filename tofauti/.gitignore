@@ -1,0 +1,12 @@
+.next/
+node_modules/
+.env
+.env.local
+__pycache__/
+.pytest_cache/
+*.pyc
+dist/
+coverage/
+*.tsbuildinfo
+apps/web/AGENTS.md
+apps/web/CLAUDE.md

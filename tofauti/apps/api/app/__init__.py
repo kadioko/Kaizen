@@ -1,0 +1,2 @@
+"""TOFAUTI API application package."""
+

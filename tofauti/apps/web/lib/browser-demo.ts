@@ -19,6 +19,18 @@ const paths: Record<Scenario, number[]> = {
   full_alignment: [3348, 3347, 3346, 3345, 3344.2, 3343.5],
 };
 
+function macroFactors(direction: Direction, now: number) {
+  const bearish = direction === 'BEARISH';
+  const score = (negative: number, positive: number) => bearish ? negative : direction === 'BULLISH' ? positive : 0;
+  return [
+    { name: 'USD', current_state: bearish ? 'STRENGTHENING' : direction === 'BULLISH' ? 'SOFTENING' : 'STABLE', directional_effect: score(-42, 30) < 0 ? 'BEARISH' as const : score(-42, 30) > 0 ? 'BULLISH' as const : 'NEUTRAL' as const, score: score(-42, 30), updated_at: new Date(now).toISOString(), source: 'Browser mock macro' },
+    { name: 'Real yields', current_state: bearish ? 'RISING' : direction === 'BULLISH' ? 'EASING' : 'STABLE', directional_effect: score(-35, 26) < 0 ? 'BEARISH' as const : score(-35, 26) > 0 ? 'BULLISH' as const : 'NEUTRAL' as const, score: score(-35, 26), updated_at: new Date(now).toISOString(), source: 'Browser mock macro' },
+    { name: 'Risk sentiment', current_state: bearish ? 'RISK-ON' : direction === 'BULLISH' ? 'CAUTIOUS' : 'MIXED', directional_effect: score(-18, 18) < 0 ? 'BEARISH' as const : score(-18, 18) > 0 ? 'BULLISH' as const : 'NEUTRAL' as const, score: score(-18, 18), updated_at: new Date(now).toISOString(), source: 'Browser mock macro' },
+    { name: 'Inflation', current_state: 'STABLE', directional_effect: 'BULLISH' as const, score: 5, updated_at: new Date(now).toISOString(), source: 'Browser mock macro' },
+    { name: 'Central-bank demand', current_state: 'STEADY', directional_effect: 'BULLISH' as const, score: 8, updated_at: new Date(now).toISOString(), source: 'Browser mock macro' },
+  ];
+}
+
 function layer(direction: Direction, score: number, strength: Strength, summary: string): LayerState {
   return { direction, score, strength, summary, evidence: { source: 'Browser deterministic demo' } };
 }
@@ -36,17 +48,17 @@ function stateFor(scenario: Scenario, step: number): WarRoomState {
   return 'IN_PLAY';
 }
 
-function event(id: string, offset: number, title: string, description: string, stateBefore: WarRoomState, stateAfter: WarRoomState, now: number): WarRoomEvent {
+function event(id: string, offset: number, title: string, description: string, stateBefore: WarRoomState, stateAfter: WarRoomState, now: number, symbol: string): WarRoomEvent {
   return {
-    id, timestamp: new Date(now - offset * 60_000).toISOString(), instrument: 'GC', category: 'DEMO', severity: offset < 2 ? 'HIGH' : 'WATCH',
+    id, timestamp: new Date(now - offset * 60_000).toISOString(), instrument: symbol, category: 'DEMO', severity: offset < 2 ? 'HIGH' : 'WATCH',
     title, description, evidence: { provider: 'Browser deterministic demo' }, state_before: stateBefore, state_after: stateAfter,
   };
 }
 
-function eventsFor(scenario: Scenario, step: number, now: number): WarRoomEvent[] {
+function eventsFor(scenario: Scenario, step: number, now: number, symbol: string): WarRoomEvent[] {
   if (scenario === 'mixed') return [];
-  if (scenario === 'bullish_reversal') return [event('reversal', 1, 'Buyer response building', 'Simulated sell pressure has faded after demand interaction.', 'LEVEL_APPROACHING', 'PRESSURE_SHIFT', now)];
-  if (scenario === 'macro_divergence') return [event('divergence', 1, 'Macro divergence visible', 'Price layers are constructive while mock macro factors remain negative for gold.', 'LEVEL_APPROACHING', 'SETUP_FORMING', now)];
+  if (scenario === 'bullish_reversal') return [event('reversal', 1, 'Buyer response building', 'Simulated sell pressure has faded after demand interaction.', 'LEVEL_APPROACHING', 'PRESSURE_SHIFT', now, symbol)];
+  if (scenario === 'macro_divergence') return [event('divergence', 1, 'Macro divergence visible', 'Price layers are constructive while mock macro factors remain negative for gold.', 'LEVEL_APPROACHING', 'SETUP_FORMING', now, symbol)];
   const sequence: Array<[number, string, string, WarRoomState, WarRoomState]> = [
     [1, 'Approaching supply', 'GC is moving into the marked 3351.0 supply and round-number area.', 'SCANNING', 'LEVEL_APPROACHING'],
     [3, 'Buy-side liquidity swept', 'Price traded beyond supply then returned beneath the level with simulated selling pressure.', 'LEVEL_APPROACHING', 'LIQUIDITY_EVENT'],
@@ -55,10 +67,10 @@ function eventsFor(scenario: Scenario, step: number, now: number): WarRoomEvent[
     [6, 'Bearish setup confirmed', 'Price returned below supply while calculated bearish alignment remained in place.', 'SETUP_FORMING', 'CONFIRMED'],
     [7, 'Continuation in progress', 'The simulated price is continuing away from the confirmed supply rejection.', 'CONFIRMED', 'IN_PLAY'],
   ];
-  return sequence.filter(([minimum]) => step >= minimum).map(([minimum, title, description, before, after]) => event(`bearish-${minimum}`, step - minimum, title, description, before, after, now)).reverse();
+  return sequence.filter(([minimum]) => step >= minimum).map(([minimum, title, description, before, after]) => event(`${symbol.toLowerCase()}-bearish-${minimum}`, step - minimum, title, description, before, after, now, symbol)).reverse();
 }
 
-export function browserDemoSnapshot(scenario: Scenario, frame: number): MarketSnapshot {
+export function browserDemoSnapshot(scenario: Scenario, frame: number, symbol: 'GC' | 'MGC' = 'GC'): MarketSnapshot {
   const path = paths[scenario];
   const step = frame % 75;
   const index = Math.min(step, path.length - 1);
@@ -82,14 +94,14 @@ export function browserDemoSnapshot(scenario: Scenario, frame: number): MarketSn
   const state = stateFor(scenario, step);
   const alignmentDirection: Direction = scenario === 'macro_divergence' ? 'NEUTRAL' : marketDirection;
   const alignmentState = scenario === 'macro_divergence' ? 'MACRO_DIVERGENCE' : marketDirection === 'BEARISH' && step >= 6 ? 'FULL_BEARISH_ALIGNMENT' : marketDirection === 'BULLISH' ? 'PARTIAL_BULLISH_ALIGNMENT' : 'MIXED';
-  const setup = state === 'CONFIRMED' || state === 'IN_PLAY' ? { id: 'GC-DEMO-001', direction: 'BEARISH' as Direction, entry_reference: 3347, invalidation: 3352.4, target1: 3345, target2: 3342, status: 'CONFIRMED' } : undefined;
+  const setup = state === 'CONFIRMED' || state === 'IN_PLAY' ? { id: `${symbol}-DEMO-001`, direction: 'BEARISH' as Direction, entry_reference: 3347, invalidation: 3352.4, target1: 3345, target2: 3342, status: 'CONFIRMED' } : undefined;
   return {
-    instrument: { symbol: 'GC', name: 'Gold Futures', tick_size: 0.1, point_value: 100, exchange: 'COMEX' }, timestamp: new Date(now).toISOString(), price, change: Number((price - path[0]).toFixed(1)), scenario, war_room_state: state,
-    macro: layer(macroDirection, macroDirection === 'BEARISH' ? -32 : macroDirection === 'BULLISH' ? 28 : 0, macroDirection === 'NEUTRAL' ? 'WEAK' : 'MODERATE', 'Mock gold macro factors are a transparent demo input.'),
+    instrument: { symbol, name: symbol === 'GC' ? 'Gold Futures' : 'Micro Gold Futures', tick_size: 0.1, point_value: symbol === 'GC' ? 100 : 10, exchange: 'COMEX' }, timestamp: new Date(now).toISOString(), price, change: Number((price - path[0]).toFixed(1)), scenario, war_room_state: state,
+    macro: { ...layer(macroDirection, macroDirection === 'BEARISH' ? -32 : macroDirection === 'BULLISH' ? 28 : 0, macroDirection === 'NEUTRAL' ? 'WEAK' : 'MODERATE', 'Mock gold macro factors are a transparent demo input.'), factors: macroFactors(macroDirection, now) },
     structure: layer(marketDirection, marketDirection === 'BEARISH' ? -64 : marketDirection === 'BULLISH' ? 58 : 0, marketDirection === 'NEUTRAL' ? 'WEAK' : 'STRONG', 'Price location is measured against marked supply, demand, and VWAP.'),
     order_flow: layer(flowDirection, flowDirection === 'BEARISH' ? -72 : flowDirection === 'BULLISH' ? 66 : 0, flowDirection === 'NEUTRAL' ? 'WEAK' : 'STRONG', 'Simulated aggressive buy/sell volume is aggregated into delta buckets.'),
     liquidity: layer(step >= 4 && isBearish ? 'BEARISH' : 'NEUTRAL', step >= 4 && isBearish ? -70 : 0, step >= 4 && isBearish ? 'STRONG' : 'WEAK', step >= 4 && isBearish ? 'A supply sweep and rejection are visible in the replay.' : 'No completed liquidity event is calculated yet.'),
     alignment: { ...layer(alignmentDirection, alignmentDirection === 'BEARISH' ? -72 : alignmentDirection === 'BULLISH' ? 58 : 0, alignmentDirection === 'NEUTRAL' ? 'MODERATE' : 'STRONG', 'Layer agreement is displayed without probability claims.'), state: alignmentState },
-    order_flow_buckets: buckets, levels, events: eventsFor(scenario, step, now), bars, setup,
+    order_flow_buckets: buckets, levels, events: eventsFor(scenario, step, now, symbol), bars, setup,
   };
 }

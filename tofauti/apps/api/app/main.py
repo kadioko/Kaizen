@@ -18,12 +18,26 @@ from tofauti_market_engine import DemoScenario, WarRoomRuntime  # noqa: E402
 from tofauti_market_engine.models import MarketSnapshot  # noqa: E402
 from .analyst import MockAIAnalyst  # noqa: E402
 from .config import load_settings  # noqa: E402
+from .repository import SupabaseRepository  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger("tofauti.api")
-runtime = WarRoomRuntime()
 settings = load_settings()
+repository = SupabaseRepository(settings.supabase_url, settings.supabase_service_role_key) if settings.supabase_configured else None
+runtime = WarRoomRuntime(repository=repository)
 analyst = MockAIAnalyst()
+
+
+def snapshot_for_symbol(symbol: str) -> MarketSnapshot:
+    if runtime.snapshot is None:
+        raise RuntimeError("Market runtime has not produced a snapshot.")
+    snapshot = runtime.snapshot.model_copy(deep=True)
+    if symbol == "MGC":
+        snapshot.instrument = runtime.micro_instrument
+        if snapshot.setup:
+            snapshot.setup.instrument = "MGC"
+            snapshot.setup.id = snapshot.setup.id.replace("GC-", "MGC-", 1)
+    return snapshot
 
 
 @asynccontextmanager
@@ -32,6 +46,8 @@ async def lifespan(_: FastAPI):
     logger.info("TOFAUTI demo runtime started")
     yield
     await runtime.stop()
+    if repository:
+        await repository.close()
     logger.info("TOFAUTI demo runtime stopped")
 
 
@@ -56,7 +72,12 @@ class AnalystRequest(BaseModel):
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok", "mode": "demo" if settings.demo_mode else "provider", "provider": "MockMarketDataProvider"}
+    return {
+        "status": "ok",
+        "mode": "demo" if settings.demo_mode else "provider",
+        "provider": "MockMarketDataProvider",
+        "persistence": "supabase" if settings.supabase_configured else "in_memory",
+    }
 
 
 @app.get("/api/instruments")
@@ -70,10 +91,7 @@ async def get_snapshot(symbol: str) -> MarketSnapshot:
         raise HTTPException(status_code=404, detail="V0.1 supports GC and MGC only.")
     if runtime.snapshot is None:
         return await runtime.step()
-    snapshot = runtime.snapshot.model_copy(deep=True)
-    if symbol == "MGC":
-        snapshot.instrument = runtime.micro_instrument
-    return snapshot
+    return snapshot_for_symbol(symbol)
 
 
 @app.get("/api/events/{symbol}")
@@ -111,10 +129,10 @@ async def market_socket(websocket: WebSocket, symbol: str):
     async def push(snapshot: MarketSnapshot) -> None:
         if queue.full():
             queue.get_nowait()
-        copy = snapshot.model_copy(deep=True)
-        if symbol == "MGC":
-            copy.instrument = runtime.micro_instrument
-        queue.put_nowait(copy)
+        if symbol == "GC":
+            queue.put_nowait(snapshot.model_copy(deep=True))
+        else:
+            queue.put_nowait(snapshot_for_symbol(symbol))
 
     runtime.add_subscriber(push)
     try:

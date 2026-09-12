@@ -1,0 +1,16 @@
+services:
+  - type: web
+    runtime: docker
+    name: tofauti-api
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: DEMO_MODE
+        value: "true"
+      - key: REDIS_ENABLED
+        value: "false"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

@@ -40,6 +40,8 @@ The web app can be deployed independently to Vercel for a shareable demo. Withou
 
 Set `NEXT_PUBLIC_API_URL` only after deploying the FastAPI/WebSocket service to a public, secure host. The UI will then use the hosted engine rather than the browser replay.
 
+For the complete Supabase, Docker-hosting, and Vercel configuration sequence, read [Deployment](docs/DEPLOYMENT.md).
+
 ## Demo Mode
 
 `DEMO_MODE=true` is the default. The `MockMarketDataProvider` is deterministic and supports these replayable scenarios:
@@ -54,7 +56,7 @@ Use the developer controls in War Room to reset a scenario. The bearish sweep fo
 
 ## Optional Local Infrastructure
 
-PostgreSQL starts with the supplied schema; Redis is optional and is not needed for demo mode.
+PostgreSQL starts with a local mirror of the TOFAUTI schema; Redis is optional and is not needed for demo mode. FastAPI uses Supabase persistence when both server-only Supabase variables are configured. The local Docker database is provided for schema inspection and future local repository integration.
 
 ```bash
 docker compose -f infrastructure/docker-compose.yml up -d
@@ -76,5 +78,6 @@ npm run build:web
 - `MockAIAnalyst` is available at `POST /api/analyst/query` and only explains the supplied current snapshot. It cannot create market data, fill missing data, or generate an unsupported signal.
 - `MockMarketDataProvider` is intentionally interchangeable with a future provider implementation. The intended next integration prompt is: **“Replace MockMarketDataProvider with Databento/CME data without changing the market-engine interfaces.”**
 - A Vercel preview without a configured hosted API deliberately uses the browser replay; it must never be described as a live market feed.
+- The public Supabase URL and anon key may be configured in the web app for Auth. `SUPABASE_SERVICE_ROLE_KEY` is server-only and is used only by FastAPI for market ingestion.
 
 Read [Architecture](docs/ARCHITECTURE.md), [Market Engine](docs/MARKET_ENGINE.md), [Data Providers](docs/DATA_PROVIDERS.md), and [Roadmap](docs/ROADMAP.md) before adding a live feed.

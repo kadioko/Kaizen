@@ -31,11 +31,12 @@ export function WarRoom() {
   const [connection, setConnection] = useState<'connecting' | 'live' | 'reconnecting' | 'browser-demo'>('connecting');
   const [scenarioLoading, setScenarioLoading] = useState(false);
   const [scenario, setScenario] = useState('bearish_liquidity_sweep');
+  const [symbol, setSymbol] = useState<'GC' | 'MGC'>('GC');
 
   useEffect(() => {
     if (usesBrowserDemo()) {
       let frame = 0;
-      const replay = () => setSnapshot(browserDemoSnapshot(scenario as Parameters<typeof browserDemoSnapshot>[0], frame++));
+      const replay = () => setSnapshot(browserDemoSnapshot(scenario as Parameters<typeof browserDemoSnapshot>[0], frame++, symbol));
       replay();
       const timer = window.setInterval(replay, 900);
       return () => window.clearInterval(timer);
@@ -43,9 +44,9 @@ export function WarRoom() {
     let socket: WebSocket | undefined;
     let reconnectTimer: number | undefined;
     let active = true;
-    getSnapshot().then((data) => active && setSnapshot(data)).catch(() => active && setConnection('reconnecting'));
+    getSnapshot(symbol).then((data) => active && setSnapshot(data)).catch(() => active && setConnection('reconnecting'));
     const connect = () => {
-      const url = marketSocketUrl();
+      const url = marketSocketUrl(symbol);
       if (!url) return;
       socket = new WebSocket(url);
       socket.onopen = () => active && setConnection('live');
@@ -59,7 +60,7 @@ export function WarRoom() {
     };
     connect();
     return () => { active = false; socket?.close(); if (reconnectTimer) window.clearTimeout(reconnectTimer); };
-  }, [scenario]);
+  }, [scenario, symbol]);
 
   async function changeScenario(scenario: string) {
     setScenarioLoading(true);
@@ -81,7 +82,7 @@ export function WarRoom() {
         <header className="mb-6 flex flex-col gap-5 border-b border-white/10 pb-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center gap-4"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-violet-400 to-fuchsia-500 text-lg font-black text-white shadow-[0_0_30px_-6px_rgba(168,85,247,.8)]">T</div><div><p className="text-lg font-black tracking-[.16em]">TOFAUTI</p><p className="text-[10px] font-bold uppercase tracking-[.2em] text-zinc-500">Market intelligence system</p></div></div>
           <TerminalNav />
-          <div className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-2 text-[10px] font-black uppercase tracking-[.16em] ${displayConnection === 'live' ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300' : displayConnection === 'browser-demo' ? 'border-violet-400/25 bg-violet-400/10 text-violet-200' : 'border-amber-400/25 bg-amber-400/10 text-amber-300'}`}><Radio size={12} className={displayConnection === 'live' || displayConnection === 'browser-demo' ? 'animate-pulse' : ''} />{displayConnection === 'live' ? 'Demo stream connected' : displayConnection === 'browser-demo' ? 'Public browser demo' : 'Reconnecting to stream'}</div>
+          <div className="flex flex-wrap items-center gap-3"><label className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[.035] px-3 py-2 text-[10px] font-black uppercase tracking-[.14em] text-zinc-400">Contract<select value={symbol} onChange={(event) => setSymbol(event.target.value as 'GC' | 'MGC')} className="bg-transparent text-violet-100 outline-none"><option value="GC">GC</option><option value="MGC">MGC</option></select></label><div className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-2 text-[10px] font-black uppercase tracking-[.16em] ${displayConnection === 'live' ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300' : displayConnection === 'browser-demo' ? 'border-violet-400/25 bg-violet-400/10 text-violet-200' : 'border-amber-400/25 bg-amber-400/10 text-amber-300'}`}><Radio size={12} className={displayConnection === 'live' || displayConnection === 'browser-demo' ? 'animate-pulse' : ''} />{displayConnection === 'live' ? 'Demo stream connected' : displayConnection === 'browser-demo' ? 'Public browser demo' : 'Reconnecting to stream'}</div></div>
         </header>
 
         <div className="grid gap-5 xl:grid-cols-[1.7fr_.85fr]">

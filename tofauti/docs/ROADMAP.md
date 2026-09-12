@@ -8,6 +8,19 @@
 - Next.js dark terminal War Room with lightweight candlesticks, levels, timeline, and scenario controls.
 - PostgreSQL schema foundation, optional Redis Docker profile, PWA manifest, and engine tests.
 
+## Complete: V0.2 Cloud-Ready Foundation
+
+- GC/MGC contract selection and expanded directional state-machine coverage.
+- Snapshot-backed Macro, Order Flow, Levels, Journal, and Settings screens.
+- Delta histogram and visible-bar volume-by-price profile, clearly labelled as demo calculations.
+- Supabase migration, RLS policies, server-only persistence repository, browser Auth/watchlist controls, and Docker hosting blueprint.
+
+## Active Blockers
+
+- Apply the Supabase migration with a valid Supabase access credential.
+- Configure a persistent FastAPI host and set its URL in Vercel.
+- Add verified Databento/CME credentials and exchange entitlements before enabling a live provider.
+
 ## Phase 2: Professional Market Data
 
 - Databento/CME integration without changing market-engine interfaces.

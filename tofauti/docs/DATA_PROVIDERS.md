@@ -14,6 +14,8 @@
 
 Create `DatabentoMarketDataProvider` in this package. It must translate the vendor response to the existing `MarketTick` contract and must not alter an engine signature. Validate exchange entitlements, symbol mappings, timestamps, trade aggressor rules, and reconnect behavior at that boundary.
 
+No Databento/CME adapter is enabled in V0.2 because no provider key, exchange entitlement, or user-approved symbol mapping has been configured. The UI and API continue to identify their source as deterministic demo data until that boundary is connected and verified.
+
 ## Data Quality Requirements
 
 - Preserve source timestamps and source names.

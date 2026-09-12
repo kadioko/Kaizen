@@ -48,6 +48,15 @@ export interface WarRoomEvent {
   state_after: WarRoomState;
 }
 
+export interface MacroFactor {
+  name: string;
+  current_state: string;
+  directional_effect: Direction;
+  score: number;
+  updated_at: string;
+  source: string;
+}
+
 export interface MarketSnapshot {
   instrument: { symbol: string; name: string; tick_size: number; point_value: number; exchange: string };
   timestamp: string;
@@ -55,7 +64,7 @@ export interface MarketSnapshot {
   change: number;
   scenario: string;
   war_room_state: WarRoomState;
-  macro: LayerState;
+  macro: LayerState & { factors?: MacroFactor[] };
   structure: LayerState;
   order_flow: LayerState;
   liquidity: LayerState;

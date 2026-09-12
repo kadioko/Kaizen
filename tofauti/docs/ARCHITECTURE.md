@@ -36,7 +36,9 @@ Production changes only the runtime host and repositories: a worker subscribes t
 
 ## Persistence Boundary
 
-The supplied PostgreSQL schema includes instruments, ticks, bars, order-flow buckets, levels, liquidity events, macro states, snapshots, War Room events, setups, setup outcomes, users, and watchlists. Demo mode retains data in memory to make a local run dependency-free. Timescale hypertables are intentionally deferred until a production PostgreSQL/Timescale target is selected.
+`apps/api/app/repository.py` contains the server-only async Supabase PostgREST repository. When `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are both present, each runtime step persists normalized ticks, bars, order-flow buckets, levels, liquidity events, macro states, snapshots, War Room events, setups, and 5/15/30/60-minute outcomes. Without both variables, demo mode remains in memory.
+
+`supabase/migrations/20260912193000_create_tofauti_market_intelligence.sql` owns `tofauti_`-prefixed tables so the product can share the Kaizen Supabase project without colliding with K OG tables. RLS applies to every table. The service role is reserved for server ingestion; browser users are restricted to their own profiles and watchlists.
 
 ## Realtime Contract
 
@@ -45,3 +47,7 @@ The supplied PostgreSQL schema includes instruments, ticks, bars, order-flow buc
 ## AI Boundary
 
 `LLMAnalyst` accepts a complete `MarketSnapshot` and returns an explanation tied to supplied evidence. V0.1 includes `MockAIAnalyst` at `POST /api/analyst/query`; it must never call a market-data vendor, infer a missing fact, or overwrite quantitative state.
+
+## Hosting Boundary
+
+Supabase provides database and authentication services. A persistent Docker service hosts FastAPI, the mock/live provider runtime, and WebSockets; `render.yaml` is supplied as one deployment target. Vercel hosts the Next.js frontend. The browser uses the public deterministic replay until `NEXT_PUBLIC_API_URL` points to a healthy API host.

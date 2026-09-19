@@ -12,6 +12,10 @@ export function usesBrowserDemo() {
   return apiUrl() === null;
 }
 
+export function marketTransportLabel() {
+  return usesBrowserDemo() ? 'SIMULATED REPLAY' : 'API STREAM CONNECTED';
+}
+
 export async function getSnapshot(symbol = 'GC'): Promise<MarketSnapshot> {
   const baseUrl = apiUrl();
   if (!baseUrl) throw new Error('No hosted market API is configured.');

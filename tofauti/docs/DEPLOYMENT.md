@@ -39,6 +39,9 @@ In the TOFAUTI Vercel project, set:
 NEXT_PUBLIC_API_URL=https://YOUR_FASTAPI_HOST
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_PUBLIC_ANON_KEY
+TWELVE_DATA_API_KEY=YOUR_SERVER_ONLY_TWELVE_DATA_KEY
 ```
+
+`TWELVE_DATA_API_KEY` is optional and must be stored as a sensitive server-only Vercel value. It enables only the separate `XAU/USD` spot reference endpoint; it does not enable GC/MGC futures, CME data, order flow, or setup generation.
 
 Redeploy after adding variables. The service-role key belongs only on the API host. If `NEXT_PUBLIC_API_URL` is omitted, the site intentionally uses its clearly labelled browser demo.

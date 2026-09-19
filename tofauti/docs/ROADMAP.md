@@ -15,6 +15,12 @@
 - Delta histogram and visible-bar volume-by-price profile, clearly labelled as demo calculations.
 - Supabase migration, RLS policies, server-only persistence repository, browser Auth/watchlist controls, and Docker hosting blueprint.
 
+## Complete: V0.3 External Price Reference
+
+- Server-only cached Twelve Data `XAU/USD` spot-reference route with timestamp and freshness metadata.
+- Prominent War Room data-quality labels that distinguish replay transport, external spot reference, and an eventual API stream.
+- Hard boundary preventing the spot reference from being treated as GC/MGC futures, order flow, or a setup input.
+
 ## Active Blockers
 
 - Configure a persistent FastAPI host and set its URL in Vercel.

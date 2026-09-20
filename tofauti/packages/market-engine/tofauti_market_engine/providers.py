@@ -65,12 +65,13 @@ class MockMarketDataProvider(MarketDataProvider):
         ],
     }
 
-    def __init__(self, scenario: DemoScenario = DemoScenario.BEARISH_LIQUIDITY_SWEEP, seed: int = 42) -> None:
+    def __init__(self, scenario: DemoScenario = DemoScenario.BEARISH_LIQUIDITY_SWEEP, seed: int = 42, start: datetime | None = None) -> None:
         self.scenario = scenario
         self._index = 0
         self._rng = Random(seed)
+        self._seed = seed
         self._connected = False
-        self._start = datetime.now(UTC).replace(second=0, microsecond=0)
+        self._start = (start or datetime.now(UTC)).replace(second=0, microsecond=0)
         self.cycle_started = False
 
     async def connect(self) -> None:
@@ -86,13 +87,15 @@ class MockMarketDataProvider(MarketDataProvider):
     def set_scenario(self, scenario: DemoScenario) -> None:
         self.scenario = scenario
         self._index = 0
-        self._start = datetime.now(UTC).replace(second=0, microsecond=0)
+        self._rng = Random(self._seed)
+        self._start += timedelta(minutes=75)
         self.cycle_started = False
 
     def next_tick(self, symbol: str = "GC") -> MarketTick:
         if self._index >= 75:
             self._index = 0
-            self._start = datetime.now(UTC).replace(second=0, microsecond=0)
+            self._start += timedelta(minutes=75)
+            self._rng = Random(self._seed)
             self.cycle_started = True
         else:
             self.cycle_started = False
@@ -135,16 +138,14 @@ class MockMarketDataProvider(MarketDataProvider):
             yield tick
 
     async def historical(self, symbol: str, start: datetime, end: datetime) -> list[MarketTick]:
-        clone = MockMarketDataProvider(self.scenario, seed=42)
+        if start.tzinfo is None or end.tzinfo is None or end < start:
+            raise ValueError("Historical range requires ordered timezone-aware timestamps.")
+        clone = MockMarketDataProvider(self.scenario, seed=self._seed, start=start)
         result: list[MarketTick] = []
-        while True:
+        for _ in range(min(250, int((end - start).total_seconds() // 60) + 2)):
             tick = clone.next_tick(symbol)
-            if tick.timestamp > end:
-                break
-            if tick.timestamp >= start:
+            if start <= tick.timestamp <= end:
                 result.append(tick)
-            if len(result) >= 250:
-                break
         return result
 
 
@@ -164,6 +165,8 @@ class MockMacroDataProvider(MacroDataProvider):
             inputs[0] = ("USD", "STRENGTHENING", -48)
             inputs[1] = ("Real yields", "RISING", -38)
             inputs[2] = ("Risk sentiment", "RISK-ON", -20)
+        if scenario == DemoScenario.MIXED:
+            inputs = [(name, "STABLE", 0) for name, _, _ in inputs]
         return [
             MacroFactor(
                 name=name,

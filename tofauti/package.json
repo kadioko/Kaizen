@@ -8,7 +8,7 @@
     "lint:web": "npm run lint --workspace @tofauti/web",
     "typecheck:web": "npm run typecheck --workspace @tofauti/web",
     "test:api": "python -m pytest tests -q",
+    "test:web": "npm run test --workspace @tofauti/web",
     "dev:api": "python -m uvicorn app.main:app --app-dir apps/api --reload --port 8000"
   }
 }
-

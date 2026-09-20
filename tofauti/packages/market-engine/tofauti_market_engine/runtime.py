@@ -102,7 +102,7 @@ class WarRoomStateMachine:
         return None
 
     def resolve_setup(self, setup: Setup, price: float, timestamp: datetime) -> WarRoomEvent | None:
-        if self.state != WarRoomState.IN_PLAY:
+        if self.state not in {WarRoomState.CONFIRMED, WarRoomState.IN_PLAY}:
             return None
         invalidated = (setup.direction == Direction.BEARISH and price >= setup.invalidation) or (setup.direction == Direction.BULLISH and price <= setup.invalidation)
         completed = (setup.direction == Direction.BEARISH and price <= setup.target2) or (setup.direction == Direction.BULLISH and price >= setup.target2)
@@ -125,7 +125,7 @@ class WarRoomRuntime:
         self.macro_engine = MacroEngine()
         self.alignment_engine = AlignmentEngine()
         self.state_machine = WarRoomStateMachine("GC")
-        self.ticks = deque(maxlen=48)
+        self.ticks = deque(maxlen=75)
         self.snapshot: MarketSnapshot | None = None
         self.setup: Setup | None = None
         self.setup_outcomes = []
@@ -135,6 +135,7 @@ class WarRoomRuntime:
         self._subscribers: set[SnapshotCallback] = set()
         self._task: asyncio.Task | None = None
         self.repository = repository
+        self.persistence_status = "pending" if repository else "in_memory"
         # HTTP demo resets, the worker loop, and WebSocket subscribers share this
         # state. One update at a time keeps a snapshot and its setup consistent.
         self._step_lock = asyncio.Lock()
@@ -194,7 +195,8 @@ class WarRoomRuntime:
             self.state_machine = WarRoomStateMachine("GC")
         self.ticks.append(tick)
         ticks = list(self.ticks)
-        buckets, flow = self.flow_engine.build(ticks)
+        _, flow = self.flow_engine.build(ticks)
+        buckets, _ = self.flow_engine.build(ticks, timeframe_minutes=5)
         structure, levels, bars = self.structure_engine.build(ticks)
         liquidity, liquidity_events = self.liquidity_engine.build(ticks, flow)
         macro = self.macro_engine.build(await self.macro_provider.current_factors(self.provider.scenario))
@@ -208,8 +210,8 @@ class WarRoomRuntime:
                 id=f"GC-{tick.timestamp:%Y%m%d-%H%M}-{direction.value}-{len(self.setup_records) + 1}", instrument="GC", direction=direction,
                 timestamp=tick.timestamp, entry_reference=tick.price,
                 invalidation=3343.0 if is_bullish else 3352.4,
-                target1=3349.0 if is_bullish else 3345.0,
-                target2=3351.0 if is_bullish else 3342.0,
+                target1=round(tick.price + (2 if is_bullish else -2), 1),
+                target2=round(tick.price + (5 if is_bullish else -5), 1),
                 alignment_state=alignment.state, macro_score=macro.score, structure_score=structure.score,
                 orderflow_score=flow.score, liquidity_score=liquidity.score,
                 snapshot={"price": tick.price, "alignment": alignment.model_dump(), "liquidity": liquidity.model_dump()},
@@ -247,10 +249,15 @@ class WarRoomRuntime:
                     setup=self.setup,
                     outcomes=self.setup_outcomes,
                 )
+                self.persistence_status = "healthy"
             except Exception:
+                self.persistence_status = "degraded"
                 # The live feed must continue, while the hosting platform records
                 # the exception and surfaces a persistence health alert separately.
                 logger.exception("Could not persist TOFAUTI market snapshot")
         for callback in tuple(self._subscribers):
-            await callback(self.snapshot)
+            try:
+                await callback(self.snapshot)
+            except Exception:
+                logger.exception("Market subscriber failed")
         return self.snapshot

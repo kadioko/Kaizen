@@ -1,5 +1,15 @@
 # Roadmap
 
+## Current Readiness
+
+- ✅ Core simulation fixes and regression tests: see [Readiness Audit](READINESS_AUDIT.md).
+- ✅ Truthful source labels, consistent replay arithmetic, full four-layer alignment, bounded stream recovery and quota-aware spot-reference polling.
+- 🟠 Simulation MVP only. "Complete" below means implemented demo scope, not a production trading service.
+- 🔴 Persistent backend hosting and live Supabase ingestion/readback still require deployment verification.
+- 🔴 Verified futures feed and real market-data normalization remain unimplemented.
+- 🔴 External XAU/USD reference currently depends on provider credit reset; exhausted quotas are not replaced with mock quotes.
+- ⚪ Durable journal history, complete entry snapshots, cross-engine parity, global API budgeting and live account isolation tests remain open.
+
 ## Complete: V0.1 Vertical Slice
 
 - GC/MGC instrument model and deterministic demo provider.

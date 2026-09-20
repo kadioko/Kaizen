@@ -1,5 +1,15 @@
 # Deployment
 
+## September 20 Readiness Changes
+
+Set `CORS_ORIGINS` on FastAPI to the exact frontend origins (comma-separated). Browser WebSockets check the same allowlist. Keep `ALLOW_DEMO_CONTROLS=false` on a shared host; enabling it permits global scenario resets without authentication and is intended only for private local development.
+
+`/health` now includes `persistence_status`: `in_memory`, `pending`, `healthy` or `degraded`. Configured Supabase credentials alone do not prove writes are succeeding. Verify stored rows and restart recovery before calling cloud persistence operational.
+
+The XAU/USD reference uses one time-series request per two minutes with instance coalescing and CDN caching. Provider HTTP 429 responses back off for 30 minutes and are shown explicitly. Multiple regions or other apps can still share/exhaust the upstream allowance; a central budget is not implemented. Never expose `TWELVE_DATA_API_KEY` to browser code.
+
+Add the deployed `/settings` URL to Supabase Auth's redirect allowlist for email confirmations. Verify watchlist instruments are seeded and use separate test accounts to check RLS. These live account checks are still pending.
+
 ## Architecture
 
 Supabase hosts PostgreSQL, Auth, and row-level security. It does not host the long-running FastAPI worker/WebSocket service. Deploy the API as the Docker service in `render.yaml` (or an equivalent persistent container host), then deploy `apps/web` to Vercel.

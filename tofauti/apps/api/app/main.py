@@ -8,7 +8,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 ENGINE_PATH = Path(__file__).resolve().parents[3] / "packages" / "market-engine"
 if str(ENGINE_PATH) not in sys.path:
@@ -34,6 +34,11 @@ def snapshot_for_symbol(symbol: str) -> MarketSnapshot:
     snapshot = runtime.snapshot.model_copy(deep=True)
     if symbol == "MGC":
         snapshot.instrument = runtime.micro_instrument
+        snapshot.source["provider"] = "MockMarketDataProvider (shared GC scenario; not independent MGC activity)"
+        for event in snapshot.events:
+            event.instrument = "MGC"
+            event.id = event.id.replace("GC-", "MGC-", 1)
+            event.description = event.description.replace("GC ", "MGC ")
         if snapshot.setup:
             snapshot.setup.instrument = "MGC"
             snapshot.setup.id = snapshot.setup.id.replace("GC-", "MGC-", 1)
@@ -54,7 +59,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="TOFAUTI Market Intelligence API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3001", "http://127.0.0.1:3001"],
+    allow_origins=list(settings.cors_origins),
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -66,17 +71,18 @@ class ScenarioRequest(BaseModel):
 
 
 class AnalystRequest(BaseModel):
-    question: str
-    symbol: str = "GC"
+    question: str = Field(min_length=1, max_length=2000)
+    symbol: str = Field(default="GC", pattern="^(GC|MGC)$")
 
 
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {
-        "status": "ok",
+        "status": "degraded" if runtime.persistence_status == "degraded" or runtime.snapshot is None or (runtime._task and runtime._task.done()) else "ok",
         "mode": "demo" if settings.demo_mode else "provider",
         "provider": "MockMarketDataProvider",
         "persistence": "supabase" if settings.supabase_configured else "in_memory",
+        "persistence_status": runtime.persistence_status,
     }
 
 
@@ -90,7 +96,7 @@ async def get_snapshot(symbol: str) -> MarketSnapshot:
     if symbol not in {"GC", "MGC"}:
         raise HTTPException(status_code=404, detail="V0.1 supports GC and MGC only.")
     if runtime.snapshot is None:
-        return await runtime.step()
+        await runtime.step()
     return snapshot_for_symbol(symbol)
 
 
@@ -103,11 +109,13 @@ async def get_events(symbol: str):
 @app.get("/api/setups/{symbol}")
 async def get_setups(symbol: str):
     await get_snapshot(symbol)
-    return [{"setup": setup, "outcomes": runtime.setup_outcomes_by_id.get(setup.id, [])} for setup in runtime.setup_records]
+    return [{"setup": setup, "outcomes": runtime.setup_outcomes_by_id.get(setup.id, [])} for setup in runtime.setup_records if setup.instrument == symbol]
 
 
 @app.post("/api/demo/scenario")
 async def change_scenario(request: ScenarioRequest):
+    if not settings.allow_demo_controls:
+        raise HTTPException(status_code=403, detail="Shared demo controls are disabled on this server.")
     await runtime.set_scenario(request.scenario)
     return {"scenario": request.scenario, "message": "Demo scenario reset."}
 
@@ -120,6 +128,10 @@ async def analyst_query(request: AnalystRequest):
 
 @app.websocket("/ws/market/{symbol}")
 async def market_socket(websocket: WebSocket, symbol: str):
+    origin = websocket.headers.get("origin")
+    if origin and origin.rstrip("/") not in settings.cors_origins:
+        await websocket.close(code=1008, reason="Origin is not allowed.")
+        return
     if symbol not in {"GC", "MGC"}:
         await websocket.close(code=1008, reason="V0.1 supports GC and MGC only.")
         return

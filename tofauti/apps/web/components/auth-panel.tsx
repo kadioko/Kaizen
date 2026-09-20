@@ -14,20 +14,27 @@ export function AuthPanel() {
 
   useEffect(() => {
     if (!supabaseBrowser) return;
-    supabaseBrowser.auth.getUser().then(({ data }) => setUser(data.user));
+    let active = true;
+    supabaseBrowser.auth.getUser().then(({ data }) => { if (active) setUser(data.user); }).catch(() => { if (active) setMessage('Could not restore your session. Please try signing in again.'); });
     const { data: listener } = supabaseBrowser.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
-    return () => listener.subscription.unsubscribe();
+    return () => { active = false; listener.subscription.unsubscribe(); };
   }, []);
 
   async function submit(mode: 'sign-in' | 'sign-up') {
     if (!supabaseBrowser) return;
     setPending(true);
     setMessage('');
-    const result = mode === 'sign-in'
-      ? await supabaseBrowser.auth.signInWithPassword({ email, password })
-      : await supabaseBrowser.auth.signUp({ email, password });
-    setPending(false);
-    setMessage(result.error ? result.error.message : mode === 'sign-up' ? 'Account created. Confirm the email if your project requires it.' : 'Signed in.');
+    try {
+      const result = mode === 'sign-in'
+        ? await supabaseBrowser.auth.signInWithPassword({ email: email.trim(), password })
+        : await supabaseBrowser.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${window.location.origin}/settings` } });
+      setMessage(result.error ? result.error.message : mode === 'sign-up' ? 'Check your email for confirmation instructions if confirmation is required.' : 'Signed in.');
+      if (!result.error) setPassword('');
+    } catch {
+      setMessage('Account service unavailable. Please try again.');
+    } finally {
+      setPending(false);
+    }
   }
 
   if (!supabaseBrowser) return <section className="panel rounded-3xl p-6"><p className="text-lg font-black">Account access</p><p className="mt-3 text-sm leading-6 text-zinc-400">Supabase browser auth is ready but not configured in this deployment. Add the public project URL and anon key in Vercel; never add a service-role key here.</p></section>;

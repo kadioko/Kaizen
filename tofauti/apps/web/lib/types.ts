@@ -58,6 +58,7 @@ export interface MacroFactor {
 }
 
 export interface MarketSnapshot {
+  source?: { mode: 'simulated' | 'live' | 'delayed' | 'unknown'; provider: string; clock: 'simulated' | 'wall' };
   instrument: { symbol: string; name: string; tick_size: number; point_value: number; exchange: string };
   timestamp: string;
   price: number;

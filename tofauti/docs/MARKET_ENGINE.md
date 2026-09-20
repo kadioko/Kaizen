@@ -36,7 +36,7 @@ The resulting event stores level, excursion, return status, and delta after the 
 
 ## Alignment
 
-Alignment considers macro, structure, order flow, and liquidity independently. Three or more agreeing directional layers with macro agreement produces full alignment; disagreement is surfaced as partial alignment, macro divergence, mixed, or neutral.
+Alignment considers macro, structure, order flow, and liquidity independently. Full alignment requires all four layers to agree. Neutral or opposing macro against matching structure/flow produces macro divergence. Conflicting flow against matching macro/structure produces order-flow divergence. Scores are averaged using symmetric half-away-from-zero rounding; strength thresholds are 30 and 60, direction thresholds are +/-12.
 
 ## War Room State Machine
 
@@ -44,4 +44,10 @@ The state machine can transition through `SCANNING`, `LEVEL_APPROACHING`, `LIQUI
 
 ## Setup Outcomes
 
-A confirmed setup captures the full calculated snapshot. In demo mode every future tick equals one simulated minute; the runtime evaluates observed price paths at 5, 15, 30, and 60 simulated minutes, recording MFE, MAE, target hit, invalidation hit, and price at each horizon. This is outcome measurement, not a forecast.
+A confirmed backend setup currently captures price, alignment and liquidity context, not a complete immutable entry snapshot. In demo mode every future tick equals one simulated minute; the runtime evaluates observed price paths at 5, 15, 30, and 60 simulated minutes. Excursions are floored at zero. Target and invalidation flags describe whether each was touched anywhere in the observation horizon, not fill order or realized P/L. Full entry snapshots, intrabar sequencing and durable history retrieval remain required before performance statistics can be offered.
+
+## Calculation Boundaries
+
+Backend aggregation groups observations by UTC timestamp into 1m or 5m buckets. State scoring uses 1m observations; the dashboard shows 5m totals, including the latest incomplete bucket. Cumulative delta spans the retained simulated session. Backend bars enclose open and close, and the displayed VWAP matches the calculated session reference. Supply, demand and prior-day levels are scenario fixtures, not production detection algorithms.
+
+The browser fallback has its own deterministic engine and synthetic volume inputs. Its scores are not numerically identical to Python. Both implementations test arithmetic invariants and full-alignment requirements. Unifying the runtime or adding cross-language parity fixtures is a release requirement before vendor integration.

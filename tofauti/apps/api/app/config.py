@@ -20,6 +20,8 @@ class Settings:
     database_url: str | None
     supabase_url: str | None
     supabase_service_role_key: str | None
+    cors_origins: tuple[str, ...]
+    allow_demo_controls: bool
 
     @property
     def supabase_configured(self) -> bool:
@@ -33,6 +35,8 @@ def load_settings() -> Settings:
         database_url=os.getenv("DATABASE_URL"),
         supabase_url=os.getenv("SUPABASE_URL"),
         supabase_service_role_key=os.getenv("SUPABASE_SERVICE_ROLE_KEY"),
+        cors_origins=tuple(origin.strip().rstrip("/") for origin in os.getenv("CORS_ORIGINS", "http://localhost:3001,http://127.0.0.1:3001,https://tofauti.vercel.app").split(",") if origin.strip()),
+        allow_demo_controls=required_boolean("ALLOW_DEMO_CONTROLS", False),
     )
     if bool(settings.supabase_url) != bool(settings.supabase_service_role_key):
         raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured together.")

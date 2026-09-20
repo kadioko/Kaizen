@@ -1,10 +1,10 @@
 import type { MarketSnapshot } from '@/lib/types';
+import { parseSnapshot } from '@/lib/market-validation';
 
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL;
 
 function apiUrl() {
-  if (configuredApiUrl) return configuredApiUrl;
-  if (typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname)) return 'http://localhost:8000';
+  if (configuredApiUrl) return configuredApiUrl.replace(/\/$/, '');
   return null;
 }
 
@@ -16,12 +16,12 @@ export function marketTransportLabel() {
   return usesBrowserDemo() ? 'SIMULATED REPLAY' : 'API STREAM CONNECTED';
 }
 
-export async function getSnapshot(symbol = 'GC'): Promise<MarketSnapshot> {
+export async function getSnapshot(symbol = 'GC', signal?: AbortSignal): Promise<MarketSnapshot> {
   const baseUrl = apiUrl();
   if (!baseUrl) throw new Error('No hosted market API is configured.');
-  const response = await fetch(`${baseUrl}/api/snapshot/${symbol}`, { cache: 'no-store' });
+  const response = await fetch(`${baseUrl}/api/snapshot/${symbol}`, { cache: 'no-store', signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(10_000)]) : AbortSignal.timeout(10_000) });
   if (!response.ok) throw new Error(`Market snapshot unavailable (${response.status}).`);
-  return response.json() as Promise<MarketSnapshot>;
+  return parseSnapshot(await response.json(), symbol);
 }
 
 export function marketSocketUrl(symbol = 'GC') {

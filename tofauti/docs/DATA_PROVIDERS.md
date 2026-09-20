@@ -12,7 +12,9 @@
 
 ## V0.3: Twelve Data Gold Spot Reference
 
-The Next.js server route at `/api/reference/gold` can fetch an `XAU/USD` spot quote and 1-minute bars from Twelve Data when a server-only `TWELVE_DATA_API_KEY` is configured. It caches upstream calls for 25 seconds, preserves the provider bar timestamp, reports freshness, and returns no data when the provider response is invalid.
+The Next.js server route at `/api/reference/gold` fetches only `XAU/USD` one-minute bars using a server-only `TWELVE_DATA_API_KEY`. The displayed price and timestamp belong to the same bar. Requests are coalesced per server instance, cached for 120 seconds and shared through CDN response caching. Hidden tabs pause polling; provider quota failures trigger a 30-minute backoff. This reduces usage but is not a global quota guarantee across regions or other apps sharing the key. A centralized quota ledger remains necessary for scale.
+
+OHLC values, positive prices, unique timestamps, market symbol, interval and future timestamps are validated. The request explicitly asks for UTC; `exchange_timezone` describes the source venue and need not match the requested output timezone. `RECENT BAR` means the bar start is no older than 180 seconds, not that the market is open or the price executable. UI age advances even between fetches. Source format: [Twelve Data API documentation](https://twelvedata.com/docs).
 
 This is a price reference, not a `MarketDataProvider` implementation: `XAU/USD` must not be relabeled as COMEX `GC` or `MGC`, and it cannot supply trade aggressor side, bid/ask depth, exchange volume, or order flow. The UI therefore presents it separately and prevents it from informing the replay's order-flow, liquidity, alignment, score, or setup state.
 

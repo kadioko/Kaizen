@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections import deque
+from collections import defaultdict
 from datetime import UTC, datetime
-from math import copysign
+from math import copysign, floor
 
 from .models import (
     AlignmentState,
@@ -23,7 +23,8 @@ from .models import (
 
 
 def clamp_score(value: float) -> int:
-    return round(max(-100, min(100, value)))
+    bounded = max(-100, min(100, value))
+    return int(copysign(floor(abs(bounded) + 0.5), bounded))
 
 
 def strength_for(score: int) -> Strength:
@@ -46,40 +47,44 @@ def direction_for(score: int, threshold: int = 12) -> Direction:
 class OrderFlowEngine:
     """Explainable V0.1 flow model. Coefficients live here for later calibration."""
 
-    def build(self, ticks: list[MarketTick]) -> tuple[list[OrderFlowBucket], LayerState]:
-        recent = ticks[-8:]
-        if not recent:
-            neutral = OrderFlowState(direction=Direction.NEUTRAL, score=0, strength=Strength.WEAK, summary="Waiting for market activity.")
-            return [], neutral
-
-        deltas = [tick.buy_volume - tick.sell_volume for tick in recent]
-        volumes = [tick.volume for tick in recent]
+    def build(self, ticks: list[MarketTick], timeframe_minutes: int = 1) -> tuple[list[OrderFlowBucket], LayerState]:
+        if timeframe_minutes not in {1, 5}:
+            raise ValueError("Only 1m and 5m buckets are supported.")
+        groups = defaultdict(list)
+        for tick in sorted(ticks, key=lambda item: item.timestamp):
+            if tick.volume < 0 or min(tick.buy_volume, tick.sell_volume) < 0 or tick.volume != tick.buy_volume + tick.sell_volume:
+                raise ValueError("Tick volume must equal nonnegative buy plus sell volume.")
+            start = int(tick.timestamp.timestamp()) // (timeframe_minutes * 60) * (timeframe_minutes * 60)
+            groups[start].append(tick)
+        if not groups:
+            return [], OrderFlowState(direction=Direction.NEUTRAL, score=0, strength=Strength.WEAK, summary="Waiting for market activity.")
         cumulative = 0
-        buckets: list[OrderFlowBucket] = []
-        previous_delta = 0
-        previous_volume = volumes[0]
-        for tick, delta, volume in zip(recent, deltas, volumes, strict=True):
+        buckets = []
+        previous_delta = None
+        previous_volume = None
+        for start, group in sorted(groups.items()):
+            buy = sum(tick.buy_volume for tick in group)
+            sell = sum(tick.sell_volume for tick in group)
+            volume = buy + sell
+            delta = buy - sell
             cumulative += delta
             buckets.append(OrderFlowBucket(
-                start=tick.timestamp,
-                timeframe="5m",
-                buy_volume=tick.buy_volume,
-                sell_volume=tick.sell_volume,
-                total_volume=volume,
-                delta=delta,
-                delta_change=delta - previous_delta,
+                start=datetime.fromtimestamp(start, UTC), timeframe=f"{timeframe_minutes}m",
+                buy_volume=buy, sell_volume=sell, total_volume=volume, delta=delta,
+                delta_change=delta - previous_delta if previous_delta is not None else 0,
                 cumulative_delta=cumulative,
-                buy_percentage=round(tick.buy_volume / volume * 100, 1),
-                sell_percentage=round(tick.sell_volume / volume * 100, 1),
-                volume_acceleration=round((volume - previous_volume) / max(previous_volume, 1) * 100, 1),
+                buy_percentage=round(buy / volume * 100, 1) if volume else 0,
+                sell_percentage=round(sell / volume * 100, 1) if volume else 0,
+                volume_acceleration=round((volume / previous_volume - 1) * 100, 1) if previous_volume else 0,
             ))
-            previous_delta = delta
-            previous_volume = volume
-
+            previous_delta, previous_volume = delta, volume
+        recent = buckets[-8:]
+        deltas = [bucket.delta for bucket in recent]
+        volumes = [bucket.total_volume for bucket in recent]
         latest = buckets[-1]
         average_abs_delta = sum(abs(value) for value in deltas) / len(deltas)
         delta_component = latest.delta / max(average_abs_delta, 1) * 35
-        cumulative_component = latest.cumulative_delta / max(sum(volumes), 1) * 70
+        cumulative_component = sum(deltas) / max(sum(volumes), 1) * 70
         acceleration_component = latest.volume_acceleration * copysign(0.16, latest.delta or 1)
         sequence_component = sum(1 if value > 0 else -1 if value < 0 else 0 for value in deltas[-3:]) * 7
         score = clamp_score(delta_component + cumulative_component + acceleration_component + sequence_component)
@@ -113,24 +118,26 @@ class StructureEngine:
         ]
 
     def build(self, ticks: list[MarketTick]) -> tuple[LayerState, list[MarketLevel], list[OHLCVBar]]:
-        recent = ticks[-24:]
+        recent = ticks
         if not recent:
             return StructureState(direction=Direction.NEUTRAL, score=0, strength=Strength.WEAK, summary="Waiting for enough ticks to map structure."), self.levels, []
-        weighted_price = sum(tick.price * tick.volume for tick in recent) / sum(tick.volume for tick in recent)
+        weighted_price = sum(tick.price * tick.volume for tick in recent) / max(sum(tick.volume for tick in recent), 1)
         latest = recent[-1]
         price_change = latest.price - recent[0].price
         vwap_distance = latest.price - weighted_price
         score = clamp_score(price_change * 22 + vwap_distance * 18)
         direction = direction_for(score)
         for level in self.levels:
+            if level.type == "VWAP":
+                level.price = round(weighted_price, 2)
             if abs(level.price - latest.price) <= 0.35:
                 level.last_interaction = latest.timestamp
         bars = [
             OHLCVBar(
                 time=int(tick.timestamp.timestamp()),
                 open=recent[index - 1].price if index else tick.price,
-                high=max(tick.ask, tick.price),
-                low=min(tick.bid, tick.price),
+                high=max(tick.ask, tick.price, recent[index - 1].price if index else tick.price),
+                low=min(tick.bid, tick.price, recent[index - 1].price if index else tick.price),
                 close=tick.price,
                 volume=tick.volume,
             )
@@ -147,7 +154,7 @@ class StructureEngine:
 
 class LiquidityEngine:
     def build(self, ticks: list[MarketTick], flow: LayerState) -> tuple[LayerState, list[LiquidityEvent]]:
-        recent = ticks[-6:]
+        recent = ticks
         if len(recent) < 3:
             return LiquidityState(direction=Direction.NEUTRAL, score=0, strength=Strength.WEAK, summary="Waiting for a level interaction."), []
         supply = 3351.0
@@ -170,7 +177,7 @@ class LiquidityEngine:
 
 class MacroEngine:
     def build(self, factors) -> MacroState:
-        score = clamp_score(sum(factor.score for factor in factors) / len(factors))
+        score = clamp_score(sum(factor.score for factor in factors) / len(factors)) if factors else 0
         direction = direction_for(score)
         return MacroState(direction=direction, score=score, strength=strength_for(score), summary=f"Mock macro basket is {direction.value.lower()} from configured USD, real-yield, sentiment, inflation, and central-bank factors.", evidence={"factor_scores": {factor.name: factor.score for factor in factors}}, factors=factors)
 
@@ -181,12 +188,16 @@ class AlignmentEngine:
         average = clamp_score(sum(scores) / len(scores))
         bearish = sum(score <= -12 for score in scores)
         bullish = sum(score >= 12 for score in scores)
-        if bearish >= 3 and macro.direction == Direction.BEARISH:
+        if bearish == 4:
             state = "FULL_BEARISH_ALIGNMENT"
-        elif bullish >= 3 and macro.direction == Direction.BULLISH:
+        elif bullish == 4:
             state = "FULL_BULLISH_ALIGNMENT"
-        elif (bearish >= 2 and macro.direction == Direction.BULLISH) or (bullish >= 2 and macro.direction == Direction.BEARISH):
+        elif structure.direction != Direction.NEUTRAL and structure.direction == flow.direction and macro.direction != structure.direction:
             state = "MACRO_DIVERGENCE"
+        elif structure.direction != Direction.NEUTRAL and macro.direction == structure.direction and flow.direction != structure.direction:
+            state = "ORDERFLOW_DIVERGENCE"
+        elif bearish >= 2 and bullish >= 2:
+            state = "MIXED"
         elif bearish >= 2:
             state = "PARTIAL_BEARISH_ALIGNMENT"
         elif bullish >= 2:

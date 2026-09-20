@@ -33,7 +33,7 @@ Start the web app in another terminal:
 npm run dev:web
 ```
 
-Open `http://localhost:3001/war-room`. The API runs on `http://localhost:8000`, and the UI receives snapshots through `ws://localhost:8000/ws/market/GC`.
+Open `http://localhost:3001/war-room`. Without `NEXT_PUBLIC_API_URL`, local and deployed frontends both run the browser replay. To test FastAPI, set `NEXT_PUBLIC_API_URL=http://localhost:8000` in `apps/web/.env.local` and restart Next.js. Export backend variables in your shell, or run Uvicorn with `--env-file .env`; copying the root example alone does not load it.
 
 ## Public Demo Deployment
 
@@ -45,7 +45,7 @@ For the complete Supabase, Docker-hosting, and Vercel configuration sequence, re
 
 ## External Gold Spot Reference
 
-When `TWELVE_DATA_API_KEY` is configured on Vercel, `/api/reference/gold` retrieves a cached `XAU/USD` spot quote and 1-minute bars server-side. The War Room displays its provider timestamp and freshness beside the GC/MGC replay.
+When `TWELVE_DATA_API_KEY` is configured on Vercel, `/api/reference/gold` retrieves `XAU/USD` one-minute bars server-side. The displayed price is the latest returned bar close, paired with that same bar's start timestamp. It is not an executable quote. The reference refreshes every two minutes, validates OHLC and timestamps, and shows elapsed age in UTC. `RECENT BAR` only describes timestamp age, not verified market activity. Quota exhaustion is displayed explicitly and backs off for 30 minutes.
 
 This reference is not a COMEX GC/MGC futures quote, does not include exchange order flow or depth, and never powers a TOFAUTI setup, score, or trade state. A Databento/CME entitlement remains required before the futures engine can be described as live.
 
@@ -59,7 +59,7 @@ This reference is not a COMEX GC/MGC futures quote, does not include exchange or
 - `macro_divergence`
 - `full_alignment`
 
-Use the developer controls in War Room to reset a scenario. The bearish sweep follows supply approach -> buy-side sweep -> seller pressure -> full bearish alignment -> confirmed setup -> continuation. This is simulated behavior for application testing, not a historical replay or trading recommendation.
+Use browser replay controls in War Room to reset a scenario; an additional browser-only `invalidation` scenario exercises failure after confirmation. Browser events use a fixed synthetic clock and repeatable inputs. Server demo controls are disabled by default because they reset every connected user's shared runtime; enable `ALLOW_DEMO_CONTROLS=true` only on a private development server. The bearish sweep follows supply approach -> buy-side sweep -> seller pressure -> full bearish alignment -> confirmed setup -> continuation. This is synthetic behavior for application testing, not historical market data.
 
 ## Optional Local Infrastructure
 
@@ -74,6 +74,7 @@ docker compose -f infrastructure/docker-compose.yml --profile cache up -d
 
 ```bash
 python -m pytest tests -q
+npm run test:web
 npm run typecheck:web
 npm run lint:web
 npm run build:web
@@ -89,3 +90,5 @@ npm run build:web
 - The public Supabase URL and anon key may be configured in the web app for Auth. `SUPABASE_SERVICE_ROLE_KEY` is server-only and is used only by FastAPI for market ingestion.
 
 Read [Architecture](docs/ARCHITECTURE.md), [Market Engine](docs/MARKET_ENGINE.md), [Data Providers](docs/DATA_PROVIDERS.md), and [Roadmap](docs/ROADMAP.md) before adding a live feed.
+
+For the verified fixes and outstanding release requirements, see [Readiness Audit](docs/READINESS_AUDIT.md). The product remains a simulation MVP, not a live futures trading intelligence service.

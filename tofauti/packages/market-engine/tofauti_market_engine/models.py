@@ -191,6 +191,7 @@ class SetupOutcome(BaseModel):
 
 
 class MarketSnapshot(BaseModel):
+    source: dict[str, str] = Field(default_factory=lambda: {"mode": "simulated", "provider": "MockMarketDataProvider", "clock": "simulated"})
     instrument: Instrument
     timestamp: datetime
     price: float

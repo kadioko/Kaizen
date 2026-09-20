@@ -1,6 +1,8 @@
 from datetime import UTC, datetime
 
 import asyncio
+import pytest
+from datetime import timedelta
 
 from tofauti_market_engine.engines import AlignmentEngine, LiquidityEngine, MacroEngine, OrderFlowEngine, StructureEngine
 from tofauti_market_engine.models import DemoScenario, Direction, LayerState, Setup, Strength, WarRoomState
@@ -156,3 +158,72 @@ def test_setup_outcome_uses_observed_prices_not_probability():
     assert outcome.target_hit is True
     assert outcome.invalidation_hit is False
     assert outcome.maximum_favorable_excursion == 5.2
+    assert outcome.maximum_adverse_excursion == 0
+
+
+def test_five_minute_buckets_group_by_timestamp_and_keep_session_cumulative():
+    ticks = build_ticks(count=12)
+    start = datetime(2026, 1, 5, 13, tzinfo=UTC)
+    for index, tick in enumerate(ticks):
+        tick.timestamp = start + timedelta(minutes=index)
+    buckets, _ = OrderFlowEngine().build(ticks, timeframe_minutes=5)
+    assert len(buckets) == 3
+    assert buckets[0].total_volume == sum(t.volume for t in ticks[:5])
+    assert buckets[1].start - buckets[0].start == timedelta(minutes=5)
+    assert buckets[-1].cumulative_delta == sum(t.buy_volume - t.sell_volume for t in ticks)
+    with pytest.raises(ValueError):
+        OrderFlowEngine().build(ticks, timeframe_minutes=3)
+
+
+def test_full_alignment_requires_all_layers():
+    bearish = LayerState(direction=Direction.BEARISH, score=-50, strength=Strength.MODERATE, summary="bearish")
+    neutral = LayerState(direction=Direction.NEUTRAL, score=0, strength=Strength.WEAK, summary="unknown")
+    engine = AlignmentEngine()
+    assert engine.build(bearish, bearish, bearish, neutral).state == "PARTIAL_BEARISH_ALIGNMENT"
+    assert engine.build(neutral, bearish, bearish, bearish).state == "MACRO_DIVERGENCE"
+    assert engine.build(bearish, bearish, bearish, bearish).state == "FULL_BEARISH_ALIGNMENT"
+
+
+def test_bars_enclose_open_and_close_and_vwap_matches_evidence():
+    state, levels, bars = StructureEngine().build(build_ticks(count=11))
+    assert all(bar.low <= min(bar.open, bar.close) <= max(bar.open, bar.close) <= bar.high for bar in bars)
+    assert next(level.price for level in levels if level.type == "VWAP") == state.evidence["vwap"]
+
+
+def test_empty_macro_and_zero_volume_are_safe():
+    assert MacroEngine().build([]).direction == Direction.NEUTRAL
+    tick = build_ticks(count=1)[0].model_copy(update={"volume": 0, "buy_volume": 0, "sell_volume": 0})
+    buckets, state = OrderFlowEngine().build([tick])
+    assert buckets[0].delta == 0 and state.score == 0
+
+
+def test_historical_mock_range_terminates_and_is_reproducible():
+    provider = MockMarketDataProvider()
+    start = datetime(2020, 1, 1, tzinfo=UTC)
+    end = start + timedelta(minutes=100)
+    first = asyncio.run(provider.historical("GC", start, end))
+    second = asyncio.run(provider.historical("GC", start, end))
+    assert first == second
+    assert len(first) == 101
+    assert all(start <= tick.timestamp <= end for tick in first)
+    assert len({tick.timestamp for tick in first}) == len(first)
+
+
+def test_confirmed_setup_checks_invalidation_without_waiting_for_continuation():
+    machine = WarRoomRuntime().state_machine
+    machine.state = WarRoomState.CONFIRMED
+    setup = Setup(id="test", instrument="GC", direction=Direction.BEARISH, timestamp=datetime.now(UTC),
+        entry_reference=3350, invalidation=3352, target1=3348, target2=3345,
+        alignment_state="FULL_BEARISH_ALIGNMENT", macro_score=-20, structure_score=-50,
+        orderflow_score=-50, liquidity_score=-50, snapshot={})
+    assert machine.resolve_setup(setup, 3353, datetime.now(UTC)).state_after == WarRoomState.INVALIDATED
+
+
+def test_persistence_failure_reports_degraded_and_does_not_stop_stream():
+    class BrokenRepository:
+        async def persist(self, **kwargs):
+            raise RuntimeError("Test failure")
+    runtime = WarRoomRuntime(repository=BrokenRepository())
+    snapshot = asyncio.run(runtime.step())
+    assert snapshot.source["mode"] == "simulated"
+    assert runtime.persistence_status == "degraded"

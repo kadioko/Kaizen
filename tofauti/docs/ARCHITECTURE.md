@@ -32,7 +32,7 @@ MockMarketDataProvider
 
 V0.1 starts `WarRoomRuntime` in FastAPI lifespan. It pushes one calculated snapshot about every 850 ms to subscribed WebSocket clients. Each demo tick represents one simulated market minute, which makes state-machine and outcome tests fast and reproducible.
 
-Production changes only the runtime host and repositories: a worker subscribes to a provider, persists normalized data, then publishes snapshots via Redis. The market-engine interfaces remain unchanged.
+The intended production architecture uses a separate worker, verified provider normalization and durable storage before publishing snapshots. That path is not implemented. Existing engines still contain demo-specific supply/demand levels and minute-observation assumptions, so live integration requires normalization and engine validation in addition to changing the host.
 
 ## Persistence Boundary
 
@@ -43,6 +43,10 @@ Production changes only the runtime host and repositories: a worker subscribes t
 ## Realtime Contract
 
 `GET /api/snapshot/{symbol}` returns the latest snapshot. `WS /ws/market/{symbol}` sends the same Pydantic snapshot payload whenever the runtime advances. Only `GC` and `MGC` are accepted in V0.1.
+
+Snapshots carry source mode, provider and clock metadata independently of transport connection state. The browser validates incoming messages, rejects wrong-symbol/corrupt payloads, reconnects with bounded backoff and marks a silent stream stale after 15 seconds. REST fetches time out after 10 seconds. Server CORS and browser WebSocket origins use `CORS_ORIGINS`; shared scenario mutations default to disabled. `/health` distinguishes configured persistence from successful or failed writes.
+
+MGC currently projects the same GC simulated scenario with MGC contract specifications; it is not an independent MGC feed. The setup-history endpoint filters by the actually stored instrument instead of presenting GC history as MGC history.
 
 ## AI Boundary
 

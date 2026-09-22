@@ -30,6 +30,16 @@ Use `DATABENTO_SCHEMA=mbp-1` first. It supports trades plus top-of-book. Switch 
 
 Deploy the Docker service using `render.yaml` or an equivalent persistent container host. Configure these values in the host’s encrypted environment settings:
 
+### Railway
+
+Railway is the recommended option when using the existing workspace account:
+
+1. Create a service from `kadioko/Kaizen`, selecting branch `codex/tofauti-v01`.
+2. Set the service root directory to `tofauti`. Railway reads `railway.json`, builds the Dockerfile, supplies `PORT`, and checks `/health`.
+3. Add the server-only values below in Railway Variables, then generate a public domain after deployment.
+
+The same repository retains `render.yaml` for Render. The runtime configuration is identical.
+
 ```text
 DEMO_MODE=false
 ALLOW_DEMO_CONTROLS=false

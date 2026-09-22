@@ -18,21 +18,25 @@ The public UI uses these bars only for transparent spot price-action calculation
 
 ## Entitled CME Futures Provider
 
-`DatabentoMarketDataProvider` is implemented for the `GLBX.MDP3` dataset and the `GC.FUT` / `MGC.FUT` parent symbols. It consumes the `MBP-1` schema because that carries top-of-book updates and trade records through one normalized boundary.
+`DatabentoMarketDataProvider` is implemented for the entitled `GLBX.MDP3` dataset. `GC.FUT` and `MGC.FUT` are the active default mappings. `NQ` and `MNQ` are catalogued but may be activated only in a configured live runtime with an operator-provided, verified parent symbol; the product does not guess vendor symbol mappings.
 
 - Each runtime is bound to exactly one contract so GC and MGC source attribution cannot be mixed.
+- `MBP-1` provides top-of-book plus trades. `MBP-10` provides up to ten market-by-price levels plus trades. `MBO` is not accepted because TOFAUTI does not yet operate a market-by-order reconstruction engine.
 - Trade aggressor side is inferred only when the trade price matches or trades through the most recent BBO. Any unmatched trade is retained as `unknown_volume`; it does not inflate buy, sell, delta, or cumulative delta.
+- The traded-volume profile is aggregated from normalized raw trade volume. Durable profile snapshots are sampled once per minute; raw ticks are retained as the source of truth for another aggregation window.
 - Source metadata includes provider, dataset, venue, parent symbol, last event timestamp, reconnect gaps, and callback errors.
 - Databento automatic reconnect and 30-second heartbeats are enabled. A reconnection gap is surfaced in source metadata and must be audited before interpreting continuity-sensitive flow data.
 - `DEMO_MODE=false`, `MARKET_DATA_PROVIDER=databento`, an entitled `DATABENTO_API_KEY`, and the `databento` server dependency are all required. The API fails fast if any are missing.
 
-The adapter does not claim MBO depth, CME-provided aggressor flags, or historical continuity beyond what is actually subscribed and persisted. Follow [Live Futures Runbook](LIVE_FUTURES_RUNBOOK.md) before enabling GC/MGC public screens.
+The adapter does not claim MBO depth, CME-provided aggressor flags, queue position, cancellation pressure, or historical continuity beyond what is actually subscribed and persisted. Follow [Live Futures Runbook](LIVE_FUTURES_RUNBOOK.md) before enabling public futures screens.
 
 ## Licensed Economic Calendar
 
 `TradingEconomicsCalendarProvider` is implemented as a separate timing and release-data source. It returns UTC event time, country, currency, importance, actual, consensus forecast, previous, revised value, and source metadata. Provider importance is mapped transparently as `1 = LOW`, `2 = MEDIUM`, and `3 = HIGH` expected volatility risk. The mapping is retained in each event's `impact_basis`; it never infers a market direction. Events are persisted in `tofauti_calendar_events` when Supabase ingestion is healthy.
 
 Calendar data is not a directional macro factor. Without separately licensed live USD, real-yield, risk-sentiment, inflation, and central-bank inputs, the macro layer stays unavailable and alignment is labelled incomplete rather than full.
+
+See [Calendar Sourcing](CALENDAR_SOURCING.md) for the permitted source policy. The application does not scrape or normalize Investing.com or Forex Factory calendar content.
 
 ## Data Quality Rules
 

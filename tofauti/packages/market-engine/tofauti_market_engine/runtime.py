@@ -4,10 +4,10 @@ import asyncio
 import logging
 from collections import deque
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 
-from .engines import AlignmentEngine, LiquidityEngine, MacroEngine, OrderFlowEngine, StructureEngine
+from .engines import AlignmentEngine, LiquidityEngine, MacroEngine, OrderFlowEngine, StructureEngine, VolumeProfileEngine
 from .models import AlignmentState, DemoScenario, Direction, Instrument, LayerState, LiquidityState, MarketSnapshot, MarketTick, Setup, WarRoomEvent, WarRoomState
 from .outcomes import evaluate_setup_outcome
 from .providers import MacroDataProvider, MarketDataProvider, MockMacroDataProvider, MockMarketDataProvider
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class MarketRepository(Protocol):
     async def initialize(self, instruments: list[Instrument]) -> None: ...
 
-    async def persist(self, *, tick, snapshot, bars, buckets, levels, liquidity_events, macro, events, setup, outcomes) -> None: ...
+    async def persist(self, *, tick, snapshot, bars, buckets, levels, liquidity_events, macro, volume_profile, events, setup, outcomes) -> None: ...
 
 
 class WarRoomStateMachine:
@@ -131,6 +131,7 @@ class WarRoomRuntime:
         self.provider = provider or MockMarketDataProvider(scenario)
         self.macro_provider = macro_provider or MockMacroDataProvider(scenario)
         self.flow_engine = OrderFlowEngine()
+        self.volume_profile_engine = VolumeProfileEngine()
         self.structure_engine = StructureEngine()
         self.liquidity_engine = LiquidityEngine()
         self.macro_engine = MacroEngine()
@@ -142,7 +143,9 @@ class WarRoomRuntime:
         self.setup_outcomes = []
         self.setup_records: list[Setup] = []
         self.setup_outcomes_by_id: dict[str, list] = {}
-        self._setup_prices: list[float] = []
+        self._setup_ticks: list[MarketTick] = []
+        self._evaluated_outcome_horizons: set[int] = set()
+        self._last_persisted_profile_minute: datetime | None = None
         self._subscribers: set[SnapshotCallback] = set()
         self._task: asyncio.Task | None = None
         self.repository = repository
@@ -190,7 +193,9 @@ class WarRoomRuntime:
             self.ticks.clear()
             self.setup = None
             self.setup_outcomes = []
-            self._setup_prices = []
+            self._setup_ticks = []
+            self._evaluated_outcome_horizons.clear()
+            self._last_persisted_profile_minute = None
             self.state_machine = WarRoomStateMachine(self.instrument.symbol)
             await self._step_locked(self.provider.next_tick(self.instrument.symbol))
 
@@ -223,12 +228,15 @@ class WarRoomRuntime:
             self.ticks.clear()
             self.setup = None
             self.setup_outcomes = []
-            self._setup_prices = []
+            self._setup_ticks = []
+            self._evaluated_outcome_horizons.clear()
+            self._last_persisted_profile_minute = None
             self.state_machine = WarRoomStateMachine(self.instrument.symbol)
         self.ticks.append(tick)
         ticks = list(self.ticks)
         _, flow = self.flow_engine.build(ticks)
         buckets, _ = self.flow_engine.build(ticks, timeframe_minutes=5)
+        volume_profile = self.volume_profile_engine.build(ticks, self.instrument.tick_size)
         structure, levels, bars = self.structure_engine.build(ticks)
         liquidity, liquidity_events = self.liquidity_engine.build(ticks, flow, levels if self.live_mode else None)
         macro = self.macro_engine.build(await self.macro_provider.current_factors())
@@ -239,10 +247,11 @@ class WarRoomRuntime:
             self.setup = self._create_setup(tick, ticks, liquidity, alignment, macro, structure, flow)
             self.setup_records.append(self.setup)
             self.setup_outcomes_by_id[self.setup.id] = self.setup_outcomes
+            self._setup_ticks = [tick]
+            self._evaluated_outcome_horizons.clear()
         elif self.setup is not None:
-            self._setup_prices.append(tick.price)
-            if len(self._setup_prices) in {5, 15, 30, 60}:
-                self.setup_outcomes.append(evaluate_setup_outcome(self.setup, self._setup_prices, len(self._setup_prices), tick.timestamp))
+            self._setup_ticks.append(tick)
+            self._record_due_outcomes(tick)
         if self.setup:
             resolution = self.state_machine.resolve_setup(self.setup, tick.price, tick.timestamp)
             if resolution:
@@ -265,9 +274,11 @@ class WarRoomRuntime:
             levels=levels,
             events=list(self.state_machine.events),
             bars=bars[-30:],
+            volume_profile=volume_profile,
+            depth_levels=tick.depth_levels,
             setup=self.setup,
         )
-        await self._persist(tick, bars, buckets, levels, liquidity_events, macro)
+        await self._persist(tick, bars, buckets, levels, liquidity_events, macro, volume_profile)
         for callback in tuple(self._subscribers):
             try:
                 await callback(self.snapshot)
@@ -306,9 +317,23 @@ class WarRoomRuntime:
             snapshot={"price": tick.price, "alignment": alignment.model_dump(), "liquidity": liquidity.model_dump(), "source": self.provider.source_metadata()},
         )
 
-    async def _persist(self, tick, bars, buckets, levels, liquidity_events, macro) -> None:
+    def _record_due_outcomes(self, current_tick: MarketTick) -> None:
+        """Evaluate on elapsed market time, not on a provider's tick count."""
+        if self.setup is None:
+            return
+        elapsed = current_tick.timestamp - self.setup.timestamp
+        for horizon in (5, 15, 30, 60):
+            if horizon in self._evaluated_outcome_horizons or elapsed < timedelta(minutes=horizon):
+                continue
+            prices = [tick.price for tick in self._setup_ticks]
+            self.setup_outcomes.append(evaluate_setup_outcome(self.setup, prices, horizon, current_tick.timestamp))
+            self._evaluated_outcome_horizons.add(horizon)
+
+    async def _persist(self, tick, bars, buckets, levels, liquidity_events, macro, volume_profile) -> None:
         if not self.repository or not self.snapshot:
             return
+        profile_minute = tick.timestamp.replace(second=0, microsecond=0)
+        persist_profile = profile_minute != self._last_persisted_profile_minute
         try:
             await self.repository.persist(
                 tick=tick,
@@ -318,10 +343,15 @@ class WarRoomRuntime:
                 levels=levels,
                 liquidity_events=liquidity_events,
                 macro=macro,
+                # The raw tick store is the historical source of truth. Profile
+                # snapshots are sampled once per minute to avoid N-squared writes.
+                volume_profile=volume_profile if persist_profile else [],
                 events=list(self.state_machine.events),
                 setup=self.setup,
                 outcomes=self.setup_outcomes,
             )
+            if persist_profile:
+                self._last_persisted_profile_minute = profile_minute
             self.persistence_status = "healthy"
         except Exception:
             self.persistence_status = "degraded"

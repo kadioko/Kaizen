@@ -12,6 +12,20 @@ class LLMAnalyst(ABC):
     async def answer(self, question: str, snapshot: MarketSnapshot) -> dict[str, object]: ...
 
 
+class AnalystUnavailable(RuntimeError):
+    """Raised when a production explanation provider has not passed safety gates."""
+
+
+class UnavailableAnalyst(LLMAnalyst):
+    """Fails closed instead of presenting a demo explanation as production AI."""
+
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+
+    async def answer(self, question: str, snapshot: MarketSnapshot) -> dict[str, object]:
+        raise AnalystUnavailable(self.reason)
+
+
 class MockAIAnalyst(LLMAnalyst):
     async def answer(self, question: str, snapshot: MarketSnapshot) -> dict[str, object]:
         query = question.lower()

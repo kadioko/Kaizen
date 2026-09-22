@@ -20,6 +20,7 @@ from .models import (
     LiquidityState,
     StructureState,
     Strength,
+    VolumeProfileLevel,
 )
 
 
@@ -108,6 +109,41 @@ class OrderFlowEngine:
                 "recent_deltas": deltas[-3:],
             },
         )
+
+
+class VolumeProfileEngine:
+    """Build a traded-volume profile from normalized exchange ticks.
+
+    This engine deliberately accepts raw ticks only. It cannot turn OHLC bars
+    into a profile because doing so would invent price-level volume.
+    """
+
+    def build(self, ticks: list[MarketTick], tick_size: float) -> list[VolumeProfileLevel]:
+        if tick_size <= 0:
+            raise ValueError("Volume-profile tick size must be positive.")
+        bins: dict[float, dict[str, int]] = {}
+        for tick in ticks:
+            components = tick.buy_volume + tick.sell_volume + tick.unknown_volume
+            if tick.volume != components:
+                raise ValueError("Tick volume must equal classified plus unknown volume before profiling.")
+            price = round(round(tick.price / tick_size) * tick_size, 10)
+            bucket = bins.setdefault(price, {"buy": 0, "sell": 0, "unknown": 0})
+            bucket["buy"] += tick.buy_volume
+            bucket["sell"] += tick.sell_volume
+            bucket["unknown"] += tick.unknown_volume
+        profile_volume = sum(values["buy"] + values["sell"] + values["unknown"] for values in bins.values())
+        return [
+            VolumeProfileLevel(
+                price=price,
+                total_volume=values["buy"] + values["sell"] + values["unknown"],
+                buy_volume=values["buy"],
+                sell_volume=values["sell"],
+                unknown_volume=values["unknown"],
+                delta=values["buy"] - values["sell"],
+                share_of_profile=round((values["buy"] + values["sell"] + values["unknown"]) / profile_volume * 100, 2) if profile_volume else 0,
+            )
+            for price, values in sorted(bins.items(), key=lambda item: item[1]["buy"] + item[1]["sell"] + item[1]["unknown"], reverse=True)
+        ]
 
 
 class StructureEngine:
@@ -204,16 +240,20 @@ class LiquidityEngine:
 
 
 class MacroEngine:
+    REQUIRED_GOLD_FACTORS = frozenset({"USD", "Real yields", "Risk sentiment", "Inflation", "Central-bank demand"})
+
     def build(self, factors) -> MacroState:
-        if not factors:
+        factor_by_name = {factor.name: factor for factor in factors}
+        missing = sorted(self.REQUIRED_GOLD_FACTORS - set(factor_by_name))
+        if missing:
             return MacroState(
                 direction=Direction.NEUTRAL,
                 score=0,
                 strength=Strength.WEAK,
-                summary="No directional macro inputs are connected. Scheduled releases must not be treated as a macro bias.",
-                evidence={"reason": "Directional macro inputs unavailable"},
+                summary="Directional macro is withheld until every required Gold driver has a verified, current source.",
+                evidence={"reason": "Directional macro inputs incomplete", "missing_factors": missing, "available_factors": sorted(factor_by_name)},
                 availability=DataAvailability.UNAVAILABLE,
-                factors=[],
+                factors=factors,
             )
         score = clamp_score(sum(factor.score for factor in factors) / len(factors))
         direction = direction_for(score)

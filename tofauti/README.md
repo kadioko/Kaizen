@@ -59,11 +59,17 @@ python -m pytest tests -q
 
 ## Live Futures Engine
 
-The FastAPI workspace now contains a `DatabentoMarketDataProvider` for `GC.FUT` and `MGC.FUT` on the entitled `GLBX.MDP3` dataset. It consumes `MBP-1` records, preserves source provenance, and classifies aggressor side only when a trade can be matched to the current top-of-book. Unmatched trades are stored as unknown volume and are not forced into delta.
+The FastAPI workspace contains a provider-neutral `DatabentoMarketDataProvider` for the entitled `GLBX.MDP3` dataset. It activates `GC.FUT` and `MGC.FUT` by default. `NQ` and `MNQ` are catalogued but remain disabled until an operator explicitly enables them in a live runtime, supplies verified parent-symbol mappings, and confirms CME display and redistribution rights.
 
-The adapter is implemented but intentionally inactive until its required server-only entitlement is configured. Use the [live futures runbook](docs/LIVE_FUTURES_RUNBOOK.md) to apply the Supabase migration, deploy the persistent container service, configure secrets, validate `/health`, then connect the Vercel frontend. The public site must continue to show the live spot-only boundary until that verification succeeds.
+`MBP-1` supports top-of-book plus trades. It can calculate delta only where a trade can be matched to the current BBO; unmatched trade volume remains `unknown_volume` and is excluded from delta. `MBP-10` may be selected only when entitled and adds a top-ten market-by-price ladder. It is not a market-by-order feed and TOFAUTI does not call the ladder a full depth heatmap. The runtime builds a traded-volume profile from raw exchange trade volume and samples durable profile snapshots no more than once per minute; raw ticks remain the source of truth.
 
-Read [Data Providers](docs/DATA_PROVIDERS.md), [Architecture](docs/ARCHITECTURE.md), [Deployment](docs/DEPLOYMENT.md), [Live Futures Runbook](docs/LIVE_FUTURES_RUNBOOK.md), [Market Engine](docs/MARKET_ENGINE.md), and [Roadmap](docs/ROADMAP.md) before enabling a provider.
+The adapter is implemented but intentionally inactive until its required server-only entitlement is configured. Use the [live futures runbook](docs/LIVE_FUTURES_RUNBOOK.md) to apply the Supabase migrations, deploy the persistent container service, configure secrets, validate `/health` and `/api/capabilities`, then connect the Vercel frontend. The public site must continue to show the live spot-only boundary until that verification succeeds.
+
+The Order Flow page includes a live-engine workspace for delta histogram, cumulative delta, traded-volume profile, and market-by-price depth. It renders only after `NEXT_PUBLIC_API_URL` points to a healthy API that reports an entitled live exchange feed. It otherwise shows a clear withheld state.
+
+Observed setup analytics are available through `GET /api/analytics/{symbol}` after server-side Supabase ingestion is live. They report recorded target/invalidation touches and MFE/MAE at elapsed 5, 15, 30, and 60-minute horizons. They never claim a probability or predicted win rate.
+
+Read [Data Providers](docs/DATA_PROVIDERS.md), [Calendar Sourcing](docs/CALENDAR_SOURCING.md), [Architecture](docs/ARCHITECTURE.md), [Deployment](docs/DEPLOYMENT.md), [Live Futures Runbook](docs/LIVE_FUTURES_RUNBOOK.md), [Market Engine](docs/MARKET_ENGINE.md), and [Roadmap](docs/ROADMAP.md) before enabling a provider.
 
 ## Dependency Policy
 

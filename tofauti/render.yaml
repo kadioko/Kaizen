@@ -12,6 +12,12 @@ services:
         value: "databento"
       - key: DATABENTO_DATASET
         value: "GLBX.MDP3"
+      - key: DATABENTO_SCHEMA
+        value: "mbp-1"
+      - key: TOFAUTI_FUTURES
+        value: "GC,MGC"
+      - key: DATABENTO_PARENT_SYMBOLS
+        value: "GC=GC.FUT,MGC=MGC.FUT"
       - key: DATABENTO_API_KEY
         sync: false
       - key: ECONOMIC_CALENDAR_PROVIDER

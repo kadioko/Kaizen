@@ -56,6 +56,17 @@ class Instrument(BaseModel):
     point_value: float
     exchange: str
     enabled: bool = True
+    activation_requirements: list[str] = Field(default_factory=list)
+
+
+class DepthLevel(BaseModel):
+    """A source-normalized price level from a market-by-price feed."""
+
+    level: int = Field(ge=0)
+    bid_price: float | None = None
+    bid_size: int = Field(default=0, ge=0)
+    ask_price: float | None = None
+    ask_size: int = Field(default=0, ge=0)
 
 
 class MarketTick(BaseModel):
@@ -72,6 +83,7 @@ class MarketTick(BaseModel):
     source: str = "unknown"
     raw_symbol: str | None = None
     aggressor_side_source: str = "unknown"
+    depth_levels: list[DepthLevel] = Field(default_factory=list)
 
 
 class Trade(BaseModel):
@@ -104,6 +116,18 @@ class OrderFlowBucket(BaseModel):
     buy_percentage: float
     sell_percentage: float
     volume_acceleration: float
+
+
+class VolumeProfileLevel(BaseModel):
+    """Volume aggregated at a traded price, never inferred from candle movement."""
+
+    price: float
+    total_volume: int = Field(ge=0)
+    buy_volume: int = Field(ge=0)
+    sell_volume: int = Field(ge=0)
+    unknown_volume: int = Field(ge=0)
+    delta: int
+    share_of_profile: float = Field(ge=0, le=100)
 
 
 class MarketLevel(BaseModel):
@@ -240,4 +264,6 @@ class MarketSnapshot(BaseModel):
     levels: list[MarketLevel]
     events: list[WarRoomEvent]
     bars: list[OHLCVBar]
+    volume_profile: list[VolumeProfileLevel] = Field(default_factory=list)
+    depth_levels: list[DepthLevel] = Field(default_factory=list)
     setup: Setup | None = None

@@ -4,8 +4,8 @@ import asyncio
 import pytest
 from datetime import timedelta
 
-from tofauti_market_engine.engines import AlignmentEngine, LiquidityEngine, MacroEngine, OrderFlowEngine, StructureEngine
-from tofauti_market_engine.models import DemoScenario, Direction, LayerState, Setup, Strength, WarRoomState
+from tofauti_market_engine.engines import AlignmentEngine, LiquidityEngine, MacroEngine, OrderFlowEngine, StructureEngine, VolumeProfileEngine
+from tofauti_market_engine.models import DataAvailability, DemoScenario, Direction, LayerState, Setup, Strength, WarRoomState
 from tofauti_market_engine.outcomes import evaluate_setup_outcome
 from tofauti_market_engine.providers import MockMacroDataProvider, MockMarketDataProvider
 from tofauti_market_engine.runtime import WarRoomRuntime
@@ -29,6 +29,24 @@ def test_macro_score_is_explainable():
     macro = MacroEngine().build(factors)
     assert macro.direction == Direction.BEARISH
     assert set(macro.evidence["factor_scores"]) == {"USD", "Real yields", "Risk sentiment", "Inflation", "Central-bank demand"}
+
+
+def test_macro_direction_is_withheld_when_a_required_gold_driver_is_missing():
+    factors = asyncio.run(MockMacroDataProvider().current_factors(DemoScenario.BEARISH_LIQUIDITY_SWEEP))[:-1]
+    macro = MacroEngine().build(factors)
+
+    assert macro.availability == DataAvailability.UNAVAILABLE
+    assert macro.direction == Direction.NEUTRAL
+    assert macro.evidence["missing_factors"] == ["Central-bank demand"]
+
+
+def test_volume_profile_uses_only_tick_volume_and_retains_unknown_volume():
+    ticks = build_ticks(count=8)
+    profile = VolumeProfileEngine().build(ticks, tick_size=0.1)
+
+    assert sum(level.total_volume for level in profile) == sum(tick.volume for tick in ticks)
+    assert sum(level.unknown_volume for level in profile) == sum(tick.unknown_volume for tick in ticks)
+    assert round(sum(level.share_of_profile for level in profile), 2) == 100
 
 
 def test_alignment_reports_macro_divergence():
@@ -159,6 +177,29 @@ def test_setup_outcome_uses_observed_prices_not_probability():
     assert outcome.invalidation_hit is False
     assert outcome.maximum_favorable_excursion == 5.2
     assert outcome.maximum_adverse_excursion == 0
+
+
+def test_runtime_outcome_horizons_use_elapsed_market_time_not_tick_count():
+    runtime = WarRoomRuntime()
+    entry_time = datetime(2026, 1, 1, 10, tzinfo=UTC)
+    runtime.setup = Setup(
+        id="GC-elapsed", instrument="GC", direction=Direction.BEARISH, timestamp=entry_time,
+        entry_reference=3350, invalidation=3353, target1=3345, target2=3342,
+        alignment_state="FULL_BEARISH_ALIGNMENT", macro_score=-40, structure_score=-50,
+        orderflow_score=-70, liquidity_score=-72, snapshot={},
+    )
+    entry = build_ticks(count=1)[0].model_copy(update={"timestamp": entry_time, "price": 3350})
+    after_four_minutes = entry.model_copy(update={"timestamp": entry_time + timedelta(minutes=4), "price": 3348})
+    after_five_minutes = entry.model_copy(update={"timestamp": entry_time + timedelta(minutes=5), "price": 3344})
+    runtime._setup_ticks = [entry, after_four_minutes]
+
+    runtime._record_due_outcomes(after_four_minutes)
+    assert runtime.setup_outcomes == []
+    runtime._setup_ticks.append(after_five_minutes)
+    runtime._record_due_outcomes(after_five_minutes)
+
+    assert [outcome.horizon_minutes for outcome in runtime.setup_outcomes] == [5]
+    assert runtime.setup_outcomes[0].target_hit is True
 
 
 def test_five_minute_buckets_group_by_timestamp_and_keep_session_cumulative():

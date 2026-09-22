@@ -37,6 +37,9 @@ DEMO_MODE=false
 MARKET_DATA_PROVIDER=databento
 DATABENTO_DATASET=GLBX.MDP3
 DATABENTO_API_KEY=YOUR_ENTITLED_SERVER_ONLY_DATABENTO_KEY
+DATABENTO_SCHEMA=mbp-1
+TOFAUTI_FUTURES=GC,MGC
+DATABENTO_PARENT_SYMBOLS=GC=GC.FUT,MGC=MGC.FUT
 ECONOMIC_CALENDAR_PROVIDER=trading_economics
 TRADING_ECONOMICS_API_KEY=YOUR_SERVER_ONLY_TRADING_ECONOMICS_KEY
 CALENDAR_COUNTRIES=united states
@@ -46,9 +49,9 @@ SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVER_ONLY_KEY
 ```
 
-Apply `20260922103000_add_live_provider_provenance.sql` after the base TOFAUTI migration. It adds raw-provider provenance, unknown-volume accounting, macro availability, nullable live scenario values, and licensed calendar archival.
+Apply `20260922103000_add_live_provider_provenance.sql` and `20260922150000_add_exchange_aggregate_storage.sql` after the base TOFAUTI migration. They add raw-provider provenance, unknown-volume accounting, macro availability, nullable live scenario values, licensed calendar archival, depth fields, and minute-sampled traded-volume profile storage.
 
-Do not set `NEXT_PUBLIC_API_URL` until `GET /health` returns `mode: live`, `market_data_provider: databento`, two running runtimes, and source metadata that names `Databento` / `GLBX.MDP3`. The detailed validation sequence is in [Live Futures Runbook](LIVE_FUTURES_RUNBOOK.md).
+Do not set `NEXT_PUBLIC_API_URL` until `GET /health` returns `mode: live`, `market_data_provider: databento`, every enabled runtime is running, and source metadata names `Databento` / `GLBX.MDP3`. Confirm `/api/capabilities` reports `market_data: AVAILABLE`; it should report `market_depth: AVAILABLE` only when the entitled `DATABENTO_SCHEMA=mbp-10` is used. The detailed validation sequence is in [Live Futures Runbook](LIVE_FUTURES_RUNBOOK.md).
 
 For local deterministic tests only:
 

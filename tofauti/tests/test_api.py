@@ -12,6 +12,11 @@ def test_api_starts_and_streams_independent_simulated_gc_and_mgc():
         health = client.get("/health").json()
         assert health["market_data_provider"] == "mock"
         assert set(health["runtimes"]) == {"GC", "MGC"}
+        assert health["capabilities"]["market_data"]["availability"] == "UNAVAILABLE"
+        assert client.get("/api/capabilities").json()["market_depth"]["availability"] == "UNAVAILABLE"
+        instrument_response = client.get("/api/instruments").json()
+        assert {item["symbol"] for item in instrument_response["active"]} == {"GC", "MGC"}
+        assert {item["symbol"] for item in instrument_response["catalog"]} == {"GC", "MGC", "NQ", "MNQ"}
         for symbol in ["GC", "MGC"]:
             response = client.get(f"/api/snapshot/{symbol}")
             assert response.status_code == 200
@@ -21,6 +26,7 @@ def test_api_starts_and_streams_independent_simulated_gc_and_mgc():
                 assert socket.receive_json()["instrument"]["symbol"] == symbol
         assert client.get("/api/snapshot/EURUSD").status_code == 404
         assert client.get("/api/setups/MGC").json() == []
+        assert client.get("/api/analytics/GC").json()["availability"] == "UNAVAILABLE"
         assert client.post("/api/demo/scenario", json={"scenario": "mixed"}).status_code == 403
         assert client.post("/api/analyst/query", json={"question": "x" * 2001}).status_code == 422
         calendar = client.get("/api/calendar").json()

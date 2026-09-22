@@ -21,12 +21,37 @@ def configured_choice(name: str, default: str, allowed: set[str]) -> str:
     return value
 
 
+def configured_symbols(name: str, default: str) -> tuple[str, ...]:
+    symbols = tuple(symbol.strip().upper() for symbol in os.getenv(name, default).split(",") if symbol.strip())
+    if not symbols:
+        raise RuntimeError(f"{name} must include at least one instrument symbol.")
+    if len(symbols) != len(set(symbols)):
+        raise RuntimeError(f"{name} must not contain duplicate instrument symbols.")
+    return symbols
+
+
+def configured_symbol_map(name: str, default: str) -> dict[str, str]:
+    pairs: dict[str, str] = {}
+    for entry in os.getenv(name, default).split(","):
+        key, separator, value = entry.partition("=")
+        if not separator or not key.strip() or not value.strip():
+            raise RuntimeError(f"{name} entries must use SYMBOL=provider_parent_symbol.")
+        symbol = key.strip().upper()
+        if symbol in pairs:
+            raise RuntimeError(f"{name} must not map {symbol} more than once.")
+        pairs[symbol] = value.strip()
+    return pairs
+
+
 @dataclass(frozen=True)
 class Settings:
     demo_mode: bool
     market_data_provider: str
     databento_api_key: str | None
     databento_dataset: str
+    databento_schema: str
+    enabled_futures: tuple[str, ...]
+    databento_parent_symbols: dict[str, str]
     calendar_provider: str
     trading_economics_api_key: str | None
     calendar_countries: tuple[str, ...]
@@ -48,6 +73,9 @@ def load_settings() -> Settings:
         market_data_provider=configured_choice("MARKET_DATA_PROVIDER", "mock", {"mock", "databento"}),
         databento_api_key=os.getenv("DATABENTO_API_KEY"),
         databento_dataset=os.getenv("DATABENTO_DATASET", "GLBX.MDP3").strip(),
+        databento_schema=configured_choice("DATABENTO_SCHEMA", "mbp-1", {"mbp-1", "mbp-10"}),
+        enabled_futures=configured_symbols("TOFAUTI_FUTURES", "GC,MGC"),
+        databento_parent_symbols=configured_symbol_map("DATABENTO_PARENT_SYMBOLS", "GC=GC.FUT,MGC=MGC.FUT"),
         calendar_provider=configured_choice("ECONOMIC_CALENDAR_PROVIDER", "none", {"none", "trading_economics"}),
         trading_economics_api_key=os.getenv("TRADING_ECONOMICS_API_KEY"),
         calendar_countries=tuple(country.strip() for country in os.getenv("CALENDAR_COUNTRIES", "united states").split(",") if country.strip()),
@@ -65,6 +93,10 @@ def load_settings() -> Settings:
             raise RuntimeError("DEMO_MODE must be false when MARKET_DATA_PROVIDER=databento.")
         if not settings.databento_api_key:
             raise RuntimeError("DATABENTO_API_KEY is required when MARKET_DATA_PROVIDER=databento.")
+        missing_parent_symbols = set(settings.enabled_futures) - set(settings.databento_parent_symbols)
+        if missing_parent_symbols:
+            missing = ", ".join(sorted(missing_parent_symbols))
+            raise RuntimeError(f"DATABENTO_PARENT_SYMBOLS is missing configured futures: {missing}.")
     elif not settings.demo_mode:
         raise RuntimeError("A live runtime requires MARKET_DATA_PROVIDER=databento and an entitled API key.")
     if settings.allow_demo_controls and not settings.demo_mode:

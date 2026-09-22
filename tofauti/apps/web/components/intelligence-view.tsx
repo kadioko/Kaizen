@@ -5,6 +5,7 @@ import { ArrowLeft, BookOpenCheck, CheckCircle2, Database, Eye, Globe2, Layers3,
 import { analyzeLivePriceAction } from '@/lib/live-price-action';
 import type { LiveSpotSymbol } from '@/lib/live-spot';
 import { AuthPanel } from './auth-panel';
+import { ExchangeOrderFlow } from './exchange-order-flow';
 import { GlobalSessionClock } from './global-session-clock';
 import { LiveSpotChart } from './live-spot-chart';
 import { LiveSpotMarket } from './live-spot-market';
@@ -58,7 +59,7 @@ function MacroView({ selectedMarket, setSelectedMarket, market, error, now }: Re
 
 function OrderFlowView({ selectedMarket, setSelectedMarket, market, error, now }: ReturnType<typeof useLiveSpotMarket> & { analysis: ReturnType<typeof analyzeLivePriceAction> }) {
   if (!market) return <LiveSpotMarket selectedMarket={selectedMarket} setSelectedMarket={setSelectedMarket} market={market} error={error} now={now} />;
-  return <><div className="grid gap-5 xl:grid-cols-[1.25fr_.75fr]"><section className="panel rounded-3xl p-5"><p className="mb-4 text-lg font-black">Live provider price bars</p><LiveSpotChart market={market} /></section><section className="panel rounded-3xl border-amber-300/20 p-6"><Waves className="text-amber-200" /><p className="mt-4 text-lg font-black">True order flow is unavailable</p><p className="mt-3 text-sm leading-6 text-zinc-400">The selected provider supplies one-minute OHLC bars only. It does not provide trade aggressor side, exchange volume, delta, cumulative delta, buy/sell percentages, DOM, or CME market-by-order data. This screen deliberately does not turn candle movement into fake order flow.</p></section></div><div className="mt-5"><LiveSpotMarket selectedMarket={selectedMarket} setSelectedMarket={setSelectedMarket} market={market} error={error} now={now} /></div></>;
+  return <><div className="grid gap-5 xl:grid-cols-[1.25fr_.75fr]"><section className="panel rounded-3xl p-5"><p className="mb-4 text-lg font-black">Live provider price bars</p><LiveSpotChart market={market} /></section><section className="panel rounded-3xl border-amber-300/20 p-6"><Waves className="text-amber-200" /><p className="mt-4 text-lg font-black">Spot price-action boundary</p><p className="mt-3 text-sm leading-6 text-zinc-400">This selected spot provider supplies one-minute OHLC bars only. It does not provide trade aggressor side, exchange volume, delta, cumulative delta, DOM, or CME market-by-order data. The exchange workspace below remains separate and appears only when an entitled engine is configured.</p></section></div><ExchangeOrderFlow /><div className="mt-5"><LiveSpotMarket selectedMarket={selectedMarket} setSelectedMarket={setSelectedMarket} market={market} error={error} now={now} /></div></>;
 }
 
 function LevelsView({ selectedMarket, setSelectedMarket, market, error, now, analysis }: ReturnType<typeof useLiveSpotMarket> & { analysis: ReturnType<typeof analyzeLivePriceAction> }) {

@@ -11,7 +11,7 @@ from typing import Any
 
 import httpx
 
-from .models import DemoScenario, Direction, EconomicCalendarEvent, MacroFactor, MarketTick
+from .models import DemoScenario, DepthLevel, Direction, EconomicCalendarEvent, MacroFactor, MarketTick
 
 logger = logging.getLogger(__name__)
 
@@ -233,7 +233,7 @@ class DatabentoSubscription:
 
 
 class DatabentoMarketDataProvider(MarketDataProvider):
-    """Normalizes entitled CME Globex MBP-1 records without leaking vendor DTOs.
+    """Normalizes entitled CME Globex market-by-price records without vendor DTOs.
 
     A provider instance is intentionally bound to one TOFAUTI instrument. That
     makes contract attribution deterministic while the service operates GC and
@@ -243,17 +243,22 @@ class DatabentoMarketDataProvider(MarketDataProvider):
 
     DATASET = "GLBX.MDP3"
     _PARENT_SYMBOLS = {"GC": "GC.FUT", "MGC": "MGC.FUT"}
+    _SUPPORTED_SCHEMAS = frozenset({"mbp-1", "mbp-10"})
 
-    def __init__(self, api_key: str, symbol: str, dataset: str = DATASET) -> None:
+    def __init__(self, api_key: str, symbol: str, dataset: str = DATASET, schema: str = "mbp-1", parent_symbol: str | None = None) -> None:
         if not api_key.strip():
             raise ProviderConfigurationError("DATABENTO_API_KEY is required for a live CME feed.")
-        try:
-            parent_symbol = self._PARENT_SYMBOLS[symbol]
-        except KeyError as exc:
-            raise ProviderConfigurationError(f"Databento adapter does not support {symbol}.") from exc
+        schema = schema.strip().lower()
+        if schema not in self._SUPPORTED_SCHEMAS:
+            supported = ", ".join(sorted(self._SUPPORTED_SCHEMAS))
+            raise ProviderConfigurationError(f"Databento schema must be one of: {supported}.")
+        parent_symbol = parent_symbol or self._PARENT_SYMBOLS.get(symbol)
+        if not parent_symbol:
+            raise ProviderConfigurationError(f"{symbol} requires a validated Databento parent symbol before it can be enabled.")
         self._api_key = api_key
         self._subscription = DatabentoSubscription(symbol=symbol, parent_symbol=parent_symbol)
         self._dataset = dataset
+        self._schema = schema
         self._client: Any | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._queue: asyncio.Queue[MarketTick] = asyncio.Queue(maxsize=10_000)
@@ -299,12 +304,11 @@ class DatabentoMarketDataProvider(MarketDataProvider):
         if symbol != self._subscription.symbol:
             raise ProviderConfigurationError(f"This Databento provider instance is bound to {self._subscription.symbol}, not {symbol}.")
         if not self._started:
-            # MBP-1 contains top-of-book updates and trades. We keep only trade
-            # records for delta while retaining the latest BBO for transparent
-            # aggressor-side inference.
+            # Market-by-price records contain trades and best-book updates.
+            # Delta uses only trades classified against the latest BBO.
             self._client.subscribe(
                 dataset=self._dataset,
-                schema="mbp-1",
+                schema=self._schema,
                 stype_in="parent",
                 symbols=self._subscription.parent_symbol,
             )
@@ -329,13 +333,16 @@ class DatabentoMarketDataProvider(MarketDataProvider):
         return await asyncio.to_thread(self._historical_sync, start, end)
 
     def source_metadata(self) -> dict[str, str]:
+        venue = "CME Globex / COMEX" if self._subscription.symbol in {"GC", "MGC"} else "CME Globex"
         metadata = {
             "mode": "live",
             "provider": "Databento",
             "dataset": self._dataset,
-            "venue": "CME Globex / COMEX",
+            "venue": venue,
             "symbol": self._subscription.parent_symbol,
-            "aggressor_side": "inferred only when an MBP-1 quote is available",
+            "schema": self._schema,
+            "aggressor_side": "inferred only when a current market-by-price BBO is available",
+            "depth": "top of book only" if self._schema == "mbp-1" else "top ten market-by-price levels",
         }
         if self._last_event_at:
             metadata["last_event_at"] = self._last_event_at.isoformat()
@@ -354,7 +361,7 @@ class DatabentoMarketDataProvider(MarketDataProvider):
         client = db.Historical(self._api_key)
         store = client.timeseries.get_range(
             dataset=self._dataset,
-            schema="mbp-1",
+            schema=self._schema,
             stype_in="parent",
             symbols=self._subscription.parent_symbol,
             start=start,
@@ -399,6 +406,7 @@ class DatabentoMarketDataProvider(MarketDataProvider):
         if getattr(record, "is_heartbeat", lambda: False)():
             return None
         quote = self._extract_quote(record)
+        depth_levels = self._extract_depth(record)
         if quote is not None:
             self._last_quote = quote
         if self._token(getattr(record, "action", "")) not in {"T", "TRADE"}:
@@ -427,11 +435,12 @@ class DatabentoMarketDataProvider(MarketDataProvider):
             ask=ask,
             volume=size,
             aggressive_side=aggressor,
-            aggressor_side_source="MBP-1 trade matched to current BBO" if aggressor != Direction.NEUTRAL else "Unclassified: no matching BBO",
+            aggressor_side_source=f"{self._schema.upper()} trade matched to current BBO" if aggressor != Direction.NEUTRAL else "Unclassified: no matching BBO",
             buy_volume=buy,
             sell_volume=sell,
             unknown_volume=unknown,
-            source="Databento GLBX.MDP3 MBP-1",
+            source=f"Databento {self._dataset} {self._schema.upper()}",
+            depth_levels=depth_levels,
         )
 
     @classmethod
@@ -464,6 +473,26 @@ class DatabentoMarketDataProvider(MarketDataProvider):
         if bid is None or ask is None or bid > ask:
             return None
         return bid, ask
+
+    def _extract_depth(self, record: Any) -> list[DepthLevel]:
+        levels = getattr(record, "levels", None)
+        if not levels:
+            return []
+        depth: list[DepthLevel] = []
+        maximum = 1 if self._schema == "mbp-1" else 10
+        for index in range(maximum):
+            try:
+                level = levels[index]
+            except (IndexError, KeyError, TypeError):
+                break
+            bid = self._price(getattr(level, "bid_px", None))
+            ask = self._price(getattr(level, "ask_px", None))
+            bid_size = int(getattr(level, "bid_sz", 0) or 0)
+            ask_size = int(getattr(level, "ask_sz", 0) or 0)
+            if bid is None and ask is None:
+                continue
+            depth.append(DepthLevel(level=index, bid_price=bid, bid_size=bid_size, ask_price=ask, ask_size=ask_size))
+        return depth
 
 
 class TradingEconomicsCalendarProvider(EconomicCalendarProvider):

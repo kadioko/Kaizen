@@ -44,6 +44,22 @@ def test_databento_adapter_never_forces_unmatched_trade_into_delta():
     assert tick.buy_volume == 0 and tick.sell_volume == 0 and tick.unknown_volume == 7
 
 
+def test_databento_adapter_rejects_unknown_schema_and_requires_a_parent_mapping():
+    try:
+        DatabentoMarketDataProvider("test-key", "NQ")
+    except RuntimeError as exc:
+        assert "parent symbol" in str(exc)
+    else:  # pragma: no cover - protects the activation guard
+        raise AssertionError("NQ must require an explicit validated parent symbol.")
+
+    try:
+        DatabentoMarketDataProvider("test-key", "GC", schema="mbo")
+    except RuntimeError as exc:
+        assert "mbp-1" in str(exc)
+    else:  # pragma: no cover - protects the schema boundary
+        raise AssertionError("MBO must not appear enabled without an order-book reconstructor.")
+
+
 def test_calendar_provider_normalizes_actual_forecast_and_revisions():
     event = TradingEconomicsCalendarProvider._event({
         "CalendarId": "123",

@@ -25,7 +25,8 @@ from tofauti_market_engine.providers import (  # noqa: E402
     UnavailableMacroDataProvider,
 )
 from tofauti_market_engine.runtime import WarRoomRuntime  # noqa: E402
-from .analyst import MockAIAnalyst  # noqa: E402
+from .analyst import AnalystUnavailable, MockAIAnalyst, UnavailableAnalyst  # noqa: E402
+from .analytics import observed_setup_analytics  # noqa: E402
 from .config import load_settings  # noqa: E402
 from .repository import SupabaseRepository  # noqa: E402
 
@@ -33,11 +34,50 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 logger = logging.getLogger("tofauti.api")
 settings = load_settings()
 repository = SupabaseRepository(settings.supabase_url, settings.supabase_service_role_key) if settings.supabase_configured else None
-analyst = MockAIAnalyst()
+analyst = MockAIAnalyst() if settings.demo_mode else UnavailableAnalyst(
+    "Grounded AI is not enabled. A production provider requires authenticated, rate-limited, auditable retrieval over stored snapshots."
+)
 
-INSTRUMENTS = {
+INSTRUMENT_CATALOG = {
     "GC": Instrument(symbol="GC", name="Gold Futures", tick_size=0.1, point_value=100, exchange="COMEX"),
     "MGC": Instrument(symbol="MGC", name="Micro Gold Futures", tick_size=0.1, point_value=10, exchange="COMEX"),
+    "NQ": Instrument(
+        symbol="NQ",
+        name="E-mini Nasdaq-100 Futures",
+        tick_size=0.25,
+        point_value=20,
+        exchange="CME",
+        enabled=False,
+        activation_requirements=[
+            "Set TOFAUTI_FUTURES=NQ after validating its entitled Databento parent symbol.",
+            "Confirm CME display and redistribution rights for the intended audience.",
+            "Verify source timestamps, contract roll handling, and the provider-health response before public use.",
+        ],
+    ),
+    "MNQ": Instrument(
+        symbol="MNQ",
+        name="Micro E-mini Nasdaq-100 Futures",
+        tick_size=0.25,
+        point_value=2,
+        exchange="CME",
+        enabled=False,
+        activation_requirements=[
+            "Set TOFAUTI_FUTURES=MNQ after validating its entitled Databento parent symbol.",
+            "Confirm CME display and redistribution rights for the intended audience.",
+            "Verify source timestamps, contract roll handling, and the provider-health response before public use.",
+        ],
+    ),
+}
+
+unknown_futures = set(settings.enabled_futures) - set(INSTRUMENT_CATALOG)
+if unknown_futures:
+    raise RuntimeError(f"TOFAUTI_FUTURES contains unknown instrument(s): {', '.join(sorted(unknown_futures))}.")
+if settings.demo_mode and any(not INSTRUMENT_CATALOG[symbol].enabled for symbol in settings.enabled_futures):
+    raise RuntimeError("NQ and MNQ may be activated only in a configured live runtime after provider validation.")
+
+INSTRUMENTS = {
+    symbol: INSTRUMENT_CATALOG[symbol].model_copy(update={"enabled": True})
+    for symbol in settings.enabled_futures
 }
 
 
@@ -46,7 +86,13 @@ def build_runtime(symbol: str) -> WarRoomRuntime:
     if settings.market_data_provider == "databento":
         return WarRoomRuntime(
             instrument=instrument,
-            provider=DatabentoMarketDataProvider(settings.databento_api_key or "", symbol, settings.databento_dataset),
+            provider=DatabentoMarketDataProvider(
+                settings.databento_api_key or "",
+                symbol,
+                settings.databento_dataset,
+                settings.databento_schema,
+                settings.databento_parent_symbols[symbol],
+            ),
             macro_provider=UnavailableMacroDataProvider(),
             repository=repository,
         )
@@ -70,7 +116,7 @@ def runtime_for(symbol: str) -> WarRoomRuntime:
     try:
         return runtimes[symbol]
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail="V0.1 supports GC and MGC only.") from exc
+        raise HTTPException(status_code=404, detail=f"{symbol} is not enabled in this TOFAUTI runtime.") from exc
 
 
 @asynccontextmanager
@@ -101,7 +147,47 @@ class ScenarioRequest(BaseModel):
 
 class AnalystRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
-    symbol: str = Field(default="GC", pattern="^(GC|MGC)$")
+    symbol: str = Field(default="GC", min_length=1, max_length=12)
+
+
+def capability_report() -> dict[str, object]:
+    live_exchange_feed = settings.market_data_provider == "databento" and not settings.demo_mode
+    depth_available = live_exchange_feed and settings.databento_schema == "mbp-10"
+    return {
+        "market_data": {
+            "availability": "AVAILABLE" if live_exchange_feed else "UNAVAILABLE",
+            "provider": settings.market_data_provider,
+            "schema": settings.databento_schema if live_exchange_feed else None,
+            "boundary": "Exchange-derived volume and delta require entitled trade data. Unmatched trades remain unknown volume.",
+        },
+        "volume_profile": {
+            "availability": "AVAILABLE" if live_exchange_feed else "UNAVAILABLE",
+            "boundary": "Built only from persisted normalized exchange trade volume; never from candles.",
+        },
+        "market_depth": {
+            "availability": "AVAILABLE" if depth_available else "UNAVAILABLE",
+            "schema": settings.databento_schema if live_exchange_feed else None,
+            "boundary": "MBP-10 exposes up to ten market-by-price levels. A full market-by-order heatmap is not implemented.",
+        },
+        "macro_drivers": {
+            "availability": "UNAVAILABLE",
+            "required_factors": ["USD", "Real yields", "Risk sentiment", "Inflation", "Central-bank demand"],
+            "boundary": "A directional macro state is withheld until every required source-backed factor is current.",
+        },
+        "calendar": {
+            "availability": "AVAILABLE" if settings.calendar_provider == "trading_economics" else "UNAVAILABLE",
+            "provider": settings.calendar_provider,
+            "boundary": "Impact is an expected-volatility category, not a directional forecast.",
+        },
+        "analyst": {
+            "availability": "DEMO_ONLY" if settings.demo_mode else "UNAVAILABLE",
+            "boundary": "Production analysis requires authenticated, rate-limited, auditable retrieval over stored snapshot context.",
+        },
+        "instruments": {
+            "active": list(INSTRUMENTS),
+            "catalog": list(INSTRUMENT_CATALOG.values()),
+        },
+    }
 
 
 @app.get("/health")
@@ -122,13 +208,19 @@ async def health() -> dict[str, object]:
         "market_data_provider": settings.market_data_provider,
         "calendar": calendar_provider.source_metadata(),
         "persistence": "supabase" if settings.supabase_configured else "in_memory",
+        "capabilities": capability_report(),
         "runtimes": runtime_states,
     }
 
 
 @app.get("/api/instruments")
 async def instruments():
-    return list(INSTRUMENTS.values())
+    return {"active": list(INSTRUMENTS.values()), "catalog": list(INSTRUMENT_CATALOG.values())}
+
+
+@app.get("/api/capabilities")
+async def capabilities():
+    return capability_report()
 
 
 @app.get("/api/snapshot/{symbol}")
@@ -151,6 +243,23 @@ async def get_setups(symbol: str):
     runtime = runtime_for(symbol)
     await get_snapshot(symbol)
     return [{"setup": setup, "outcomes": runtime.setup_outcomes_by_id.get(setup.id, [])} for setup in runtime.setup_records]
+
+
+@app.get("/api/analytics/{symbol}")
+async def get_analytics(symbol: str):
+    runtime_for(symbol)
+    if repository is None:
+        return {
+            "availability": "UNAVAILABLE",
+            "observed_outcomes": 0,
+            "horizons": [],
+            "boundary": "Observed setup analytics require the server-side Supabase repository and applied migrations.",
+        }
+    try:
+        return observed_setup_analytics(await repository.fetch_setup_outcomes(symbol))
+    except Exception as exc:
+        logger.exception("Could not fetch persisted setup outcomes")
+        raise HTTPException(status_code=503, detail="Observed setup analytics are temporarily unavailable.") from exc
 
 
 @app.get("/api/calendar")
@@ -187,7 +296,10 @@ async def change_scenario(request: ScenarioRequest):
 
 @app.post("/api/analyst/query")
 async def analyst_query(request: AnalystRequest):
-    return await analyst.answer(request.question, await get_snapshot(request.symbol))
+    try:
+        return await analyst.answer(request.question, await get_snapshot(request.symbol))
+    except AnalystUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.websocket("/ws/market/{symbol}")
@@ -199,7 +311,7 @@ async def market_socket(websocket: WebSocket, symbol: str):
     try:
         runtime = runtime_for(symbol)
     except HTTPException:
-        await websocket.close(code=1008, reason="V0.1 supports GC and MGC only.")
+        await websocket.close(code=1008, reason=f"{symbol} is not enabled in this TOFAUTI runtime.")
         return
     await websocket.accept()
     queue: asyncio.Queue[MarketSnapshot] = asyncio.Queue(maxsize=2)

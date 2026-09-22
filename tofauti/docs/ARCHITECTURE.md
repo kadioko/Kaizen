@@ -36,19 +36,19 @@ MockMarketDataProvider
 
 The FastAPI `WarRoomRuntime` remains an offline development harness. It pushes calculated mock snapshots about every 850 ms so provider adapters and state-machine behavior can be tested reproducibly. It is not mounted by public web pages.
 
-The FastAPI production path now supports two explicit modes. `mock` powers local deterministic adapter tests only. `databento` starts independent GC and MGC runtimes with source-normalized CME futures data, dynamic observed levels, live WebSocket snapshots, and durable persistence. It fails closed if a live entitlement is absent.
+The FastAPI production path now supports two explicit modes. `mock` powers local deterministic adapter tests only. `databento` starts independent futures runtimes with source-normalized CME data, dynamic observed levels, live WebSocket snapshots, and durable persistence. `GC` and `MGC` are the active default. `NQ` and `MNQ` are catalogued but require explicit live-only activation, a verified parent-symbol configuration, and entitlement review. The process fails closed if a required live entitlement is absent.
 
 The public Vercel frontend remains spot-only until the hosted API reports live provider health and its WebSocket client is activated. This prevents an unavailable container, a mock service, or a missing entitlement from being presented as CME data.
 
 ## Persistence Boundary
 
-`apps/api/app/repository.py` contains the server-only async Supabase PostgREST repository. When `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are both present, each runtime step persists normalized ticks, bars, order-flow buckets, levels, liquidity events, macro states, snapshots, War Room events, setups, and 5/15/30/60-minute outcomes. Without both variables, demo mode remains in memory.
+`apps/api/app/repository.py` contains the server-only async Supabase PostgREST repository. When `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are both present, each runtime step persists normalized ticks, bars, order-flow buckets, levels, liquidity events, macro states, snapshots, War Room events, setups, and observed 5/15/30/60-minute outcomes. Traded-volume profile snapshots are sampled no more than once per minute; raw ticks remain the source of truth. Without both variables, demo mode remains in memory.
 
 `supabase/migrations/20260912193000_create_tofauti_market_intelligence.sql` owns `tofauti_`-prefixed tables so the product can share the Kaizen Supabase project without colliding with K OG tables. RLS applies to every table. The service role is reserved for server ingestion; browser users are restricted to their own profiles and watchlists.
 
 ## Realtime Contract
 
-`GET /api/snapshot/{symbol}` returns the latest snapshot. `WS /ws/market/{symbol}` sends the same Pydantic snapshot payload whenever the runtime advances. `GET /api/calendar` returns the licensed calendar only when configured. Only `GC` and `MGC` are accepted in V0.1.
+`GET /api/snapshot/{symbol}` returns the latest snapshot. `WS /ws/market/{symbol}` sends the same Pydantic snapshot payload whenever the runtime advances. `GET /api/calendar` returns the licensed calendar only when configured. `GET /api/capabilities` reports the enabled and withheld data layers, while `GET /api/analytics/{symbol}` summarizes persisted observed outcomes without calculating probabilities.
 
 Snapshots carry source mode, provider and clock metadata independently of transport connection state. The browser validates incoming messages, rejects wrong-symbol/corrupt payloads, reconnects with bounded backoff and marks a silent stream stale after 15 seconds. REST fetches time out after 10 seconds. Server CORS and browser WebSocket origins use `CORS_ORIGINS`; shared scenario mutations default to disabled. `/health` distinguishes configured persistence from successful or failed writes.
 
@@ -56,7 +56,7 @@ GC and MGC now run as independent provider-bound runtimes. This uses two provide
 
 ## AI Boundary
 
-`LLMAnalyst` accepts a complete `MarketSnapshot` and returns an explanation tied to supplied evidence. V0.1 includes `MockAIAnalyst` at `POST /api/analyst/query`; it must never call a market-data vendor, infer a missing fact, or overwrite quantitative state.
+`LLMAnalyst` accepts a complete `MarketSnapshot` and returns an explanation tied to supplied evidence. `MockAIAnalyst` is available only in local demo mode. A live runtime uses `UnavailableAnalyst` and returns `503` until an authenticated, rate-limited, auditable stored-snapshot retrieval path is implemented. Neither implementation may call a market-data vendor, infer a missing fact, or overwrite quantitative state.
 
 ## Hosting Boundary
 

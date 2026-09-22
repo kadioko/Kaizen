@@ -17,6 +17,7 @@ from tofauti_market_engine.models import (
     OrderFlowBucket,
     Setup,
     SetupOutcome,
+    VolumeProfileLevel,
     WarRoomEvent,
 )
 
@@ -60,6 +61,7 @@ class SupabaseRepository:
         levels: list[MarketLevel],
         liquidity_events: list[LiquidityEvent],
         macro: MacroState,
+        volume_profile: list[VolumeProfileLevel],
         events: list[WarRoomEvent],
         setup: Setup | None,
         outcomes: list[SetupOutcome],
@@ -70,6 +72,7 @@ class SupabaseRepository:
             "sell_volume": tick.sell_volume, "unknown_volume": tick.unknown_volume,
             "aggressive_side": tick.aggressive_side.value, "source": tick.source,
             "raw_symbol": tick.raw_symbol, "aggressor_side_source": tick.aggressor_side_source,
+            "depth": [level.model_dump(mode="json") for level in tick.depth_levels],
         }], "symbol,timestamp")
         await self._upsert("tofauti_bars", [{
             "symbol": snapshot.instrument.symbol, "timeframe": "1m",
@@ -83,6 +86,13 @@ class SupabaseRepository:
             "buy_percentage": bucket.buy_percentage, "sell_percentage": bucket.sell_percentage,
             "volume_acceleration": bucket.volume_acceleration,
         } for bucket in buckets], "symbol,timeframe,timestamp")
+        await self._upsert("tofauti_volume_profiles", [{
+            "symbol": snapshot.instrument.symbol, "timestamp": snapshot.timestamp.isoformat(),
+            "price": level.price, "total_volume": level.total_volume,
+            "buy_volume": level.buy_volume, "sell_volume": level.sell_volume,
+            "unknown_volume": level.unknown_volume, "delta": level.delta,
+            "share_of_profile": level.share_of_profile,
+        } for level in volume_profile], "symbol,timestamp,price")
         await self._upsert("tofauti_levels", [{
             "id": level.id, "symbol": snapshot.instrument.symbol, "level_type": level.type, "price": level.price,
             "strength": level.strength.value, "touches": level.touches,
@@ -145,6 +155,22 @@ class SupabaseRepository:
             "source_url": event.source_url,
             "payload": event.model_dump(mode="json"),
         } for event in events], "id")
+
+    async def fetch_setup_outcomes(self, symbol: str) -> list[dict[str, Any]]:
+        """Return only persisted outcome measurements for a single active instrument."""
+        response = await self._client.get(
+            f"{self._url}/rest/v1/tofauti_setup_outcomes",
+            params={
+                "select": "horizon_minutes,mfe,mae,target_hit,invalidation_hit,price_at_horizon,tofauti_setups!inner(symbol)",
+                "tofauti_setups.symbol": f"eq.{symbol}",
+            },
+            headers=self._headers,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if not isinstance(payload, list):
+            raise ValueError("Supabase setup-outcome query returned an unexpected payload.")
+        return [row for row in payload if isinstance(row, dict)]
 
     async def _insert(self, table: str, rows: list[dict[str, Any]]) -> None:
         if not rows:

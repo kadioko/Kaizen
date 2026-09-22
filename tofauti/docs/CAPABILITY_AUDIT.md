@@ -29,18 +29,20 @@ This audit maps common market-intelligence dashboard capabilities to TOFAUTI's v
 | Full macro calendar | Licensed Trading Economics key and hosted ingestion | Provider importance maps to `LOW`, `MEDIUM`, or `HIGH` expected volatility risk without direction inference. |
 | WebSocket War Room | Persistent API host plus `NEXT_PUBLIC_API_URL` | Browser must confirm a live provider health payload before labelling the feed live. |
 | Durable snapshots and setup outcomes | Applied Supabase migrations and healthy server-side writes | Setup measurements must be observed before analytics or calibration. |
+| Delta histogram, cumulative delta, and traded-volume profile | Entitled exchange trade feed, hosted FastAPI service, and `NEXT_PUBLIC_API_URL` | Computed only from normalized exchange records; unavailable on the public spot feed. |
+| Top-ten depth ladder | Entitled Databento `MBP-10` schema, hosted FastAPI service, and verified display rights | Market-by-price only; it is not presented as market-by-order depth or a queue heatmap. |
+| GC/MGC observed-outcome analytics | Applied exchange aggregate migration plus healthy Supabase writes | Reports recorded 5/15/30/60-minute MFE, MAE, target and invalidation touches; never a forecast. |
+| NQ/MNQ runtime | Explicit live activation, verified provider parent symbols, and CME entitlement/display review | Catalogued but disabled by default; no symbol mapping is guessed. |
 
 ## Not Built Yet
 
 | Capability | Planned approach |
 | --- | --- |
-| Volume profile and order-flow histogram | Build from verified exchange trade data after live ingestion and historical storage. |
-| Liquidity heatmap | Define a source-backed futures depth/volume methodology; do not relabel generic price zones as a heatmap. |
-| Full macro factor model | Add licensed inputs for USD, real yields, risk sentiment, inflation, and central-bank demand, with freshness and source attribution. |
-| Multi-market heatmap or breadth view | Add only after instrument coverage and a documented aggregation method exist. |
-| MNQ/NQ and other futures markets | Extend the provider-neutral interface after GC/MGC production validation. |
-| Setup journal, equity curve, heatmaps, and historical backtesting | Persist observed outcomes first; no invented win rate, confidence, or probability. |
-| AI analyst | Add authenticated server-side retrieval over stored snapshots with citations, rate limits, and audit logging. |
+| Full market-by-order heatmap | Define a source-backed order-book reconstruction, cancellation/queue methodology, retention controls, and display rights. Do not relabel MBP-10 as this. |
+| Full macro factor model | Add licensed inputs for USD, real yields, risk sentiment, inflation, and central-bank demand, with freshness and source attribution. The engine withholds direction until all five are available. |
+| Multi-market heatmap or breadth view | Add only after active instrument coverage and a documented aggregation method exist. |
+| Setup journal, equity curve, and historical backtesting | Persist observed outcomes first; no invented win rate, confidence, or probability. |
+| Production AI analyst | Add authenticated server-side retrieval over stored snapshots with citations, rate limits, approval boundaries, and audit logging. |
 | Broker execution | Out of scope. TOFAUTI is an analysis and decision-support product, not an execution system. |
 
 ## Event-Impact Rule
@@ -54,4 +56,5 @@ This audit maps common market-intelligence dashboard capabilities to TOFAUTI's v
 - Show provider, timestamp, symbol, freshness, and availability with each live layer.
 - Preserve raw source data before derived calculations when cloud ingestion is enabled.
 - Keep all automated explanations grounded in structured evidence.
+- Do not scrape or republish third-party calendar data; see [Calendar Sourcing](CALENDAR_SOURCING.md).
 - Do not promise profits or present calculated strength as win probability.

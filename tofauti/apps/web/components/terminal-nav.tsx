@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Activity, BookOpen, ChartNoAxesCombined, Layers3, Settings, Waves } from 'lucide-react';
+import { Activity, BookOpen, ChartNoAxesCombined, CircleHelp, Layers3, Settings, Waves } from 'lucide-react';
 
 const items = [
   { href: '/war-room', label: 'War Room', icon: Activity },
@@ -7,6 +7,7 @@ const items = [
   { href: '/macro', label: 'Macro', icon: ChartNoAxesCombined },
   { href: '/levels', label: 'Levels', icon: Layers3 },
   { href: '/journal', label: 'Journal', icon: BookOpen },
+  { href: '/guide', label: 'Guide', icon: CircleHelp },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 

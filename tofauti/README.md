@@ -8,9 +8,14 @@ TOFAUTI is an explainable live spot-market price-action workspace. It does not i
 - Live calculated price-action context: recent structure, rolling high/low references, round-number references, range acceptance, and range rejection observations.
 - Live source-bar timeline: timestamped observations derived only from the returned OHLC bars.
 - Official macro-risk schedule: upcoming FOMC meeting dates from the Federal Reserve, labelled as `HIGH` expected volatility risk with an explicit non-directional boundary.
+- Global Session Clock: current Sydney, Tokyo, London, and New York regional session windows, including active overlaps such as London/New York.
+- Display-timezone preference: device-detected by default, configurable with an IANA timezone in Settings, and applied to visible bars and War Room timeline times.
+- Effective-use guide: an in-product workflow for timing, risk checks, live-source validation, and safe interpretation boundaries.
 - Persistent auth and watchlist interfaces remain separately scoped through Supabase.
 
 The public web application no longer mounts the browser replay provider or displays GC/MGC simulated prices, delta, setups, or replay controls.
+
+Regional session timing is calculated from each session center's IANA timezone, so daylight saving time adjusts automatically. It is a schedule reference only: it does not measure liquidity, volume, market participation, or a trade opportunity.
 
 ## Deliberate Data Boundaries
 

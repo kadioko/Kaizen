@@ -1,14 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, BookOpenCheck, Database, Layers3, Settings2, ShieldCheck, Waves } from 'lucide-react';
+import { ArrowLeft, BookOpenCheck, CheckCircle2, Database, Layers3, Settings2, ShieldCheck, Waves } from 'lucide-react';
 import { analyzeLivePriceAction } from '@/lib/live-price-action';
 import type { LiveSpotSymbol } from '@/lib/live-spot';
 import { AuthPanel } from './auth-panel';
+import { GlobalSessionClock } from './global-session-clock';
 import { LiveSpotChart } from './live-spot-chart';
 import { LiveSpotMarket } from './live-spot-market';
 import { OfficialMacroRisk } from './official-macro-risk';
 import { TerminalNav } from './terminal-nav';
+import { TimezoneSettings } from './timezone-settings';
 import { useLiveSpotMarket } from './use-live-spot-market';
 import { WatchlistPanel } from './watchlist-panel';
 
@@ -17,6 +19,7 @@ const content: Record<string, { title: string; eyebrow: string }> = {
   'order-flow': { title: 'Order Flow Coverage', eyebrow: 'Feed availability' },
   levels: { title: 'Live Level Map', eyebrow: 'Price-action references' },
   journal: { title: 'Observed Setup Journal', eyebrow: 'Evidence retention' },
+  guide: { title: 'How To Use TOFAUTI', eyebrow: 'Effective operating workflow' },
   settings: { title: 'System Settings', eyebrow: 'Runtime configuration' },
 };
 
@@ -37,6 +40,7 @@ function LiveWorkspace({ children }: { children: (args: ReturnType<typeof useLiv
 export function IntelligenceView({ view }: { view: string }) {
   const item = content[view] ?? { title: 'Not found', eyebrow: 'TOFAUTI' };
   if (view === 'settings') return <Shell {...item}><SettingsView /></Shell>;
+  if (view === 'guide') return <Shell {...item}><GuideView /></Shell>;
   return <Shell {...item}><LiveWorkspace>{(workspace) => {
     if (view === 'macro') return <MacroView {...workspace} />;
     if (view === 'order-flow') return <OrderFlowView {...workspace} />;
@@ -67,5 +71,17 @@ function JournalView({ selectedMarket, setSelectedMarket, market, error, now }: 
 }
 
 function SettingsView() {
-  return <><div className="grid gap-5 lg:grid-cols-2"><section className="panel rounded-3xl p-6"><Settings2 className="text-cyan-200" /><p className="mt-4 text-lg font-black">Public runtime</p><p className="mt-2 text-sm leading-6 text-zinc-400">The public workspace uses a server-only Twelve Data key for selected spot-market OHLC bars and a cached Federal Reserve FOMC schedule. The browser never receives the provider secret. No browser simulation provider is mounted in the public app.</p></section><section className="panel rounded-3xl p-6"><Database className="text-cyan-200" /><p className="mt-4 text-lg font-black">What needs a provider</p><p className="mt-2 text-sm leading-6 text-zinc-400">True GC/MGC futures prices and order flow require a licensed futures provider such as Databento with the right CME entitlements. Directional macro analysis needs separately verified macro feeds. Neither is approximated from the current spot bars.</p><div className="mt-5 flex items-center gap-2 text-xs text-zinc-400"><ShieldCheck size={15} className="text-emerald-300" /> Auth and personal watchlists remain separately scoped.</div></section></div><div className="mt-5 grid gap-5 lg:grid-cols-2"><AuthPanel /><WatchlistPanel /></div></>;
+  return <><div className="grid gap-5 lg:grid-cols-2"><TimezoneSettings /><section className="panel rounded-3xl p-6"><Settings2 className="text-cyan-200" /><p className="mt-4 text-lg font-black">Public runtime</p><p className="mt-2 text-sm leading-6 text-zinc-400">The public workspace uses a server-only Twelve Data key for selected spot-market OHLC bars and a cached Federal Reserve FOMC schedule. The browser never receives the provider secret. No browser simulation provider is mounted in the public app.</p></section><section className="panel rounded-3xl p-6"><Database className="text-cyan-200" /><p className="mt-4 text-lg font-black">What needs a provider</p><p className="mt-2 text-sm leading-6 text-zinc-400">True GC/MGC futures prices and order flow require a licensed futures provider such as Databento with the right CME entitlements. Directional macro analysis needs separately verified macro feeds. Neither is approximated from the current spot bars.</p><div className="mt-5 flex items-center gap-2 text-xs text-zinc-400"><ShieldCheck size={15} className="text-emerald-300" /> Auth and personal watchlists remain separately scoped.</div></section><section className="panel rounded-3xl p-6"><BookOpenCheck className="text-cyan-200" /><p className="mt-4 text-lg font-black">Use the workspace deliberately</p><p className="mt-2 text-sm leading-6 text-zinc-400">Set your display timezone, use the Global Session Clock to understand timing, check scheduled risk, then interpret only the live layers with an identified source.</p><Link href="/guide" className="mt-5 inline-flex text-sm font-bold text-violet-200 hover:text-violet-100">Read the effective-use guide</Link></section></div><div className="mt-5 grid gap-5 lg:grid-cols-2"><AuthPanel /><WatchlistPanel /></div></>;
+}
+
+function GuideView() {
+  const steps = [
+    ['1', 'Set the display clock', 'In Settings, choose your IANA timezone. Source timestamps stay intact while bars and timeline events display in the timezone you select.'],
+    ['2', 'Start with timing', 'Use the Global Session Clock on the War Room to see the regional windows that are active and whether London and New York overlap. Session status describes timing, not volume or a trading signal.'],
+    ['3', 'Check scheduled risk', 'Read the official FOMC panel before reviewing the latest bars. HIGH, MEDIUM, and LOW are expected-volatility categories, not direction, probability, or price targets.'],
+    ['4', 'Choose the right market', 'Select XAU/USD, EUR/USD, GBP/USD, or USD/JPY. Confirm the source, the latest-bar age, and the selected instrument before interpreting any state.'],
+    ['5', 'Read the verified layers', 'Structure and range interaction are calculated only from the returned spot OHLC bars. Read their evidence and timeline together; neither is an entry instruction.'],
+    ['6', 'Respect unavailable layers', 'TOFAUTI withholds true exchange order flow and directional macro conclusions until dedicated verified data is connected. Do not treat an unavailable layer as neutral or infer it from candles.'],
+  ];
+  return <><div className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]"><section className="panel rounded-3xl p-6"><div className="flex items-center gap-2 text-violet-200"><BookOpenCheck size={18} /><p className="text-[10px] font-black uppercase tracking-[.18em]">Six-step workflow</p></div><h2 className="mt-4 text-2xl font-black">Use context before interpretation.</h2><p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">The platform is designed to make source-backed context visible quickly. It is not a signal generator, a broker tool, or a substitute for your own risk process.</p><div className="mt-6 space-y-3">{steps.map(([number, title, detail]) => <article key={number} className="grid grid-cols-[38px_1fr] gap-4 rounded-2xl border border-white/[.07] bg-white/[.025] p-4"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-300/10 text-xs font-black text-violet-100">{number}</span><div><p className="font-bold text-zinc-100">{title}</p><p className="mt-1 text-sm leading-6 text-zinc-400">{detail}</p></div></article>)}</div></section><div className="space-y-5"><GlobalSessionClock /><section className="panel rounded-3xl border-amber-300/20 p-6"><div className="flex items-center gap-2 text-amber-200"><CheckCircle2 size={18} /><p className="text-[10px] font-black uppercase tracking-[.18em]">Truthful-use check</p></div><p className="mt-4 text-lg font-black">Before relying on a screen</p><ul className="mt-4 space-y-3 text-sm leading-6 text-zinc-400"><li>Confirm the provider, instrument, and freshness.</li><li>Separate spot price action from futures, order flow, and macro data.</li><li>Read event impact as volatility sensitivity only.</li><li>Do not turn calculated state into a probability or execution instruction.</li></ul></section></div></div></>;
 }

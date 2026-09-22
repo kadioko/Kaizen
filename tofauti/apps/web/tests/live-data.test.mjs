@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { parseLiveSpotSeries, isLiveSpotSymbol, liveSpotAge } from '../lib/live-spot.ts';
 import { nextUpcomingFomcEvents } from '../lib/fomc-schedule.ts';
 import { analyzeLivePriceAction } from '../lib/live-price-action.ts';
+import { describeActiveSessions, getMarketSessionStatuses } from '../lib/market-sessions.ts';
 
 const now = Date.parse('2026-09-22T12:01:00Z');
 const livePayload = (symbol = 'EUR/USD') => ({
@@ -55,6 +56,20 @@ test('official FOMC parser returns only future published meeting dates', () => {
 test('official FOMC parser rejects unparseable rows instead of inventing calendar events', () => {
   const html = '<h4><a id="one">2027 FOMC Meetings</a></h4><div class="fomc-meeting__month"><strong>Smarch</strong></div><div class="fomc-meeting__date">30-31</div>';
   assert.deepEqual(nextUpcomingFomcEvents(html, new Date('2026-09-22T12:00:00Z')), []);
+});
+
+test('global session clock detects the London and New York overlap in local market time', () => {
+  const sessions = getMarketSessionStatuses(new Date('2026-09-22T13:00:00Z'));
+  assert.deepEqual(sessions.filter((session) => session.active).map((session) => session.id), ['london', 'new-york']);
+  assert.equal(describeActiveSessions(sessions), 'London / New York overlap active');
+  assert.match(sessions.find((session) => session.id === 'london').localTime, /14:00/);
+  assert.match(sessions.find((session) => session.id === 'new-york').localTime, /09:00/);
+});
+
+test('global session clock treats regional weekends as closed even when local clock falls in a window', () => {
+  const sessions = getMarketSessionStatuses(new Date('2026-09-20T12:00:00Z'));
+  assert.equal(sessions.some((session) => session.active), false);
+  assert.equal(describeActiveSessions(sessions), 'No defined regional session windows are active');
 });
 
 function marketFromBars(bars) {

@@ -14,6 +14,9 @@ This audit maps common market-intelligence dashboard capabilities to TOFAUTI's v
 | Range acceptance and rejection | Available | Derived from price bars and named as price action, not liquidity/order flow. |
 | War Room timeline | Available | Timestamped source-bar observations, not a simulated replay. |
 | Upcoming FOMC risk | Available | Official Federal Reserve dates with `HIGH` expected volatility risk; no direction, price target, or probability. |
+| Global trading-session status | Available | Sydney, Tokyo, London, and New York regional time windows with IANA timezone/DST handling; timing only, not a liquidity or volume claim. |
+| Personal display timezone | Available on this browser | Device-detected default and manual IANA override; visible bars and timeline times use it. Cloud preference sync is not yet enabled. |
+| Effective-use guide | Available | In-product six-step workflow explains how to interpret only the source-backed layers. |
 | Data availability labels | Available | Macro direction and true order flow are withheld when unsupported. |
 
 ## Implemented but Not Publicly Activated

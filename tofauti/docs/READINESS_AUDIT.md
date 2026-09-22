@@ -11,6 +11,8 @@ TOFAUTI's public web app is a live spot price-action workspace. It is not a live
 - The visible latest price and timestamp always come from the same provider bar. Cache and provider-quota failures render an explicit unavailable state; a simulated quote is never substituted.
 - Structure, rolling high/low references, round-number references, range acceptance/rejection, and timeline observations are derived from returned OHLC bars only.
 - Macro direction is withheld. The only live macro source is the official Federal Reserve FOMC schedule. FOMC dates are marked `HIGH` expected volatility risk with a published non-directional explanation, not a market-impact forecast.
+- The Global Session Clock shows Sydney, Tokyo, London, and New York regional schedule windows using their own IANA time zones. It is not labelled as measured liquidity, exchange hours, or market participation.
+- Users can select an IANA display timezone in Settings. The preference is browser-local and visible timestamps convert for display without overwriting source timestamps.
 - True order flow is withheld. The current feed does not expose exchange trades, volume, aggressor side, delta, cumulative delta, depth, DOM, or liquidity.
 - Secondary Macro, Order Flow, Levels, Journal, and Settings routes use the same live source or explicitly state unavailable coverage.
 

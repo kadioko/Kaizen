@@ -26,6 +26,8 @@ supabase link --project-ref YOUR_PROJECT_REF
 supabase db push
 ```
 
+For the Kaizen project’s exact resume, migration, provider-secret, preflight, and Vercel-release order, follow [Production Activation](PRODUCTION_ACTIVATION.md). A Supabase personal access token is not a database password and does not replace a paused-project resume in Supabase Studio.
+
 The migration uses `tofauti_`-prefixed tables so TOFAUTI can safely share the Kaizen Supabase project. It enables RLS everywhere and only permits authenticated users to access their own profile and watchlist. Market ingestion remains server-only through the service role.
 
 ## 2. Deploy FastAPI

@@ -11,6 +11,8 @@ This runbook activates the hosted TOFAUTI futures engine only after each externa
 3. Create a Trading Economics API credential with economic-calendar access for the intended countries. The application currently defaults to United States events.
 4. Keep both credentials server-only. Never put them in Vercel browser variables, source control, screenshots, or support messages.
 
+Before the deploy order, confirm the Supabase project is active. A project listed as `INACTIVE` must be resumed by an owner in Supabase Studio before migrations or database operations can proceed. See [Production Activation](PRODUCTION_ACTIVATION.md).
+
 ## Deploy Order
 
 1. Apply the base TOFAUTI Supabase migration, `20260922103000_add_live_provider_provenance.sql`, and `20260922150000_add_exchange_aggregate_storage.sql` to the Kaizen Supabase project.
@@ -22,6 +24,7 @@ This runbook activates the hosted TOFAUTI futures engine only after each externa
 7. Query `GET /api/snapshot/GC`, `GET /api/snapshot/MGC`, `/api/capabilities`, and `GET /api/calendar`. Verify provider timestamps are recent, symbols are independent, calendar events show timing/actual/forecast values plus source-backed `LOW` / `MEDIUM` / `HIGH` expected-volatility labels, and no `Mock` source text is present. Confirm the capabilities report withholds depth unless `MBP-10` is both configured and entitled.
 8. Open one `WS /ws/market/GC` connection from the deployed TOFAUTI origin. Confirm it emits source-stamped updates without CORS or stale-stream errors.
 9. Only then add the HTTPS API origin to Vercel as `NEXT_PUBLIC_API_URL`, redeploy the web application, and conduct a visible acceptance check.
+10. Run `scripts/verify_live_engine.py` against the deployed API as part of every release and after any provider/schema change.
 
 ## Data-Quality Gates
 

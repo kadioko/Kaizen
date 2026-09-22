@@ -69,7 +69,7 @@ The Order Flow page includes a live-engine workspace for delta histogram, cumula
 
 Observed setup analytics are available through `GET /api/analytics/{symbol}` after server-side Supabase ingestion is live. They report recorded target/invalidation touches and MFE/MAE at elapsed 5, 15, 30, and 60-minute horizons. They never claim a probability or predicted win rate.
 
-Read [Data Providers](docs/DATA_PROVIDERS.md), [Calendar Sourcing](docs/CALENDAR_SOURCING.md), [Architecture](docs/ARCHITECTURE.md), [Deployment](docs/DEPLOYMENT.md), [Live Futures Runbook](docs/LIVE_FUTURES_RUNBOOK.md), [Market Engine](docs/MARKET_ENGINE.md), and [Roadmap](docs/ROADMAP.md) before enabling a provider.
+Read [Production Activation](docs/PRODUCTION_ACTIVATION.md), [Data Providers](docs/DATA_PROVIDERS.md), [Calendar Sourcing](docs/CALENDAR_SOURCING.md), [Architecture](docs/ARCHITECTURE.md), [Deployment](docs/DEPLOYMENT.md), [Live Futures Runbook](docs/LIVE_FUTURES_RUNBOOK.md), [Market Engine](docs/MARKET_ENGINE.md), and [Roadmap](docs/ROADMAP.md) before enabling a provider.
 
 ## Dependency Policy
 

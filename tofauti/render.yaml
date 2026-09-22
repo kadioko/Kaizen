@@ -10,6 +10,8 @@ services:
         value: "false"
       - key: MARKET_DATA_PROVIDER
         value: "databento"
+      - key: ALLOW_DEMO_CONTROLS
+        value: "false"
       - key: DATABENTO_DATASET
         value: "GLBX.MDP3"
       - key: DATABENTO_SCHEMA

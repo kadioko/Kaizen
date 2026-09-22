@@ -11,3 +11,5 @@ coverage/
 *.tsbuildinfo
 apps/web/AGENTS.md
 apps/web/CLAUDE.md
+
+.vercel/

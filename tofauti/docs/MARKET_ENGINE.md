@@ -1,5 +1,7 @@
 # Market Engine
 
+> The Python order-flow engine is an offline provider-adapter harness. The current public web app does not call it because its live spot source does not supply the required trade-level inputs. Public screens withhold order-flow conclusions rather than simulate them.
+
 ## Principle
 
 TOFAUTI calculates states from normalized raw components. Scores are internal diagnostics in the range `-100` to `100`; the product displays only directional state and `WEAK`, `MODERATE`, or `STRONG` strength. Scores are not probabilities.

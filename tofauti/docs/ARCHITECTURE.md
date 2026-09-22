@@ -1,5 +1,9 @@
 # Architecture
 
+## Current Public Web Mode
+
+The deployed Next.js application does not connect to the FastAPI mock runtime. It obtains selected spot OHLC bars through `/api/market/spot`, reads the official FOMC calendar through `/api/macro/us-risk`, and derives only transparent price-action classifications from those sources. True order flow, directional macro, GC/MGC futures, setups, and durable outcomes are withheld until dedicated providers are integrated.
+
 ## System Shape
 
 ```text
@@ -30,7 +34,7 @@ MockMarketDataProvider
 
 ## Runtime Modes
 
-V0.1 starts `WarRoomRuntime` in FastAPI lifespan. It pushes one calculated snapshot about every 850 ms to subscribed WebSocket clients. Each demo tick represents one simulated market minute, which makes state-machine and outcome tests fast and reproducible.
+The FastAPI `WarRoomRuntime` remains an offline development harness. It pushes calculated mock snapshots about every 850 ms so provider adapters and state-machine behavior can be tested reproducibly. It is not mounted by public web pages.
 
 The intended production architecture uses a separate worker, verified provider normalization and durable storage before publishing snapshots. That path is not implemented. Existing engines still contain demo-specific supply/demand levels and minute-observation assumptions, so live integration requires normalization and engine validation in addition to changing the host.
 
@@ -54,4 +58,4 @@ MGC currently projects the same GC simulated scenario with MGC contract specific
 
 ## Hosting Boundary
 
-Supabase provides database and authentication services. A persistent Docker service hosts FastAPI, the mock/live provider runtime, and WebSockets; `render.yaml` is supplied as one deployment target. Vercel hosts the Next.js frontend. The browser uses the public deterministic replay until `NEXT_PUBLIC_API_URL` points to a healthy API host.
+Supabase provides database and authentication services. A persistent Docker service can host a future verified futures runtime and WebSockets; `render.yaml` is supplied as one deployment target. Vercel hosts the Next.js frontend and its server-side spot/schedule routes. The public browser does not use the deterministic replay.

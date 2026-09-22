@@ -39,7 +39,7 @@ SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVER_ONLY_KEY
 ```
 
-Confirm `GET /health` returns `"persistence": "supabase"` before connecting the frontend. Do not use a Vercel Function for this worker: a persistent process is needed for the in-memory demo clock and WebSocket subscriptions.
+Confirm `GET /health` returns `"persistence": "supabase"` before enabling any future API-backed futures features. Do not use a Vercel Function for a persistent futures worker or WebSocket service.
 
 ## 3. Connect Vercel
 
@@ -54,4 +54,4 @@ TWELVE_DATA_API_KEY=YOUR_SERVER_ONLY_TWELVE_DATA_KEY
 
 `TWELVE_DATA_API_KEY` is optional and must be stored as a sensitive server-only Vercel value. It enables only the separate selected-spot reference endpoint; it does not enable GC/MGC futures, CME data, order flow, or setup generation.
 
-Redeploy after adding variables. The service-role key belongs only on the API host. If `NEXT_PUBLIC_API_URL` is omitted, the site intentionally uses its clearly labelled browser demo.
+Redeploy after adding variables. The service-role key belongs only on the API host. The current public web app does not require `NEXT_PUBLIC_API_URL`: it uses its own server-side spot and official-schedule routes. Do not connect the FastAPI mock runtime to public pages.

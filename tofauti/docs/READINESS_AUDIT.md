@@ -2,41 +2,31 @@
 
 ## Release Status
 
-TOFAUTI is a simulation MVP with provider-reported spot references for XAU/USD and selected major FX pairs. It is not ready to claim live GC/MGC order flow, independent MGC analysis, calibrated trading signals or durable user trade history.
+TOFAUTI's public web app is a live spot price-action workspace. It is not a live GC/MGC order-flow service, directional macro engine, signal generator, or durable trade journal.
 
-## Verified Repairs
+## Verified Public Behavior
 
-- Browser delta now equals buy minus sell volume; cumulative delta is a running sum. Five-minute totals aggregate actual minute inputs, including an explicitly partial current bucket.
-- Replay candles and headline price share one path. Events have stable synthetic timestamps, and a sweep requires a crossed level followed by a return inside.
-- Full alignment requires all four layers. Strength labels derive from scores; confirmations require full directional alignment. Bullish/bearish completion, mixed no-confirmation and invalidation paths are exercised.
-- Backend buckets are grouped by UTC time. Candles enclose both open and close; displayed VWAP matches calculated evidence. MFE and MAE cannot be negative.
-- Historical mock queries terminate on bounded ranges. Seeded queries reproduce the same data and timestamps.
-- Browser pages share one instrument/scenario/stream through the root workspace provider. Charts retain their instance and zoom between updates.
-- Narrow-screen cards can shrink around wide tables; tables scroll within their cards instead of forcing horizontal page overflow.
-- REST requests have timeouts. Stream payloads are validated; wrong-symbol or malformed data is rejected. A silent stream is marked stale, with bounded reconnection backoff.
-- Simulation provenance is separate from connection status. Macro factors, fixture levels, approximate volume profiles and temporary journals are labelled accordingly.
-- Selected spot-reference price and time now come from the same provider bar. Validation rejects corrupt OHLC, duplicate/future timestamps and unexpected markets. UI age continues to advance between fetches.
-- XAU/USD, EUR/USD, GBP/USD and USD/JPY are selectable one-minute spot references. Requests are coalesced per market, cached for five minutes, and subject to a visible 30-minute quota backoff. No synthetic quote replaces missing external data.
-- Upcoming FOMC meeting dates are read from the official Federal Reserve calendar. They are shown as scheduled risk only; the app does not invent release times, consensus, actual values, or price effects.
-- Shared server scenario reset is disabled by default. CORS/WebSocket origins are configured explicitly. API health exposes persistence failures; one subscriber failure cannot stop the runtime.
-- Settings remain reachable without a healthy market connection. Auth failures release pending state, signup redirects back to this app, and duplicate watchlist saves no longer require an absent UPDATE policy.
+- The public app does not mount the browser-replay provider and does not render simulated GC/MGC prices, delta, setup states, developer controls, or replay timeline records.
+- `XAU/USD`, `EUR/USD`, `GBP/USD`, and `USD/JPY` use the server-side Twelve Data route. The response validates requested symbol, one-minute interval, positive OHLC, timestamp ordering, duplicate timestamps, and future timestamps.
+- The visible latest price and timestamp always come from the same provider bar. Cache and provider-quota failures render an explicit unavailable state; a simulated quote is never substituted.
+- Structure, rolling high/low references, round-number references, range acceptance/rejection, and timeline observations are derived from returned OHLC bars only.
+- Macro direction is withheld. The only live macro source is the official Federal Reserve FOMC schedule, presented as scheduled risk rather than a market-impact forecast.
+- True order flow is withheld. The current feed does not expose exchange trades, volume, aggressor side, delta, cumulative delta, depth, DOM, or liquidity.
+- Secondary Macro, Order Flow, Levels, Journal, and Settings routes use the same live source or explicitly state unavailable coverage.
 
 ## Verification
 
-- 14 browser/data-contract regression tests cover all 75 frames of six scenarios, arithmetic, alignment, stable events, malformed inputs, spot timestamps, and official-calendar parsing.
-- 19 Python tests cover engines, outcomes, persistence failure, historical queries, API startup, REST, GC/MGC WebSockets, CORS and disabled shared mutations.
-- ESLint, TypeScript and Next.js production build passed during this audit. Final UI/deployment checks are recorded in the delivery message.
-- A live Twelve Data check returned recent XAU/USD, EUR/USD, GBP/USD, and USD/JPY one-minute responses on 2026-09-22. Provider allowance is shared and can still be exhausted by other apps or regions; the UI never replaces a quota failure with a synthetic quote.
+- Seven live-data tests cover malformed provider data, source-symbol classification, timestamps, FOMC calendar parsing, live structure/range calculations, and rejection handling without order-flow fields.
+- Python engine tests remain for the offline provider-adapter harness.
+- ESLint, TypeScript, and Next.js production build must pass before every deployment.
 
 ## Remaining Requirements
 
-1. Host the persistent FastAPI service and verify Supabase writes and readback end-to-end, including restart recovery, retention, write retries and instrument seeding for watchlists.
-2. Connect an entitled GC/MGC provider. Validate contract rollover, timestamps, venue, trade aggressor classification, genuine minute bars, tick precision and feed gaps before treating any state as live.
-3. Replace demo-specific structure/liquidity references and define session/calendar boundaries. Browser and Python engines are separate implementations, not numerical parity guarantees.
-4. Persist complete entry snapshots and durable setup histories. Current journal shows the current replay setup; observed target/stop touches are not fills or realized returns.
-5. Add a shared server quota budget across instances and apps, provider health monitoring and reliable market-hours/delay metadata.
-6. Verify authenticated signup/signin, email redirect allowlists, user isolation and watchlist writes against live Supabase using dedicated test accounts.
-7. Validate a real analyst provider with authenticated context, rate limits and audit logging before advertising AI reasoning. The current analyst is deterministic explanation only.
-8. Add measured historical replay/backtesting with execution assumptions before performance claims. There is no calibrated win probability.
+1. Connect an entitled futures provider for GC/MGC and validate source quality before showing a live futures view.
+2. Connect trade-level/exchange data before calculating or displaying order-flow metrics.
+3. Connect verified macro sources before assigning any directional macro state.
+4. Host durable ingestion and persist raw inputs, snapshots, events, and observed outcomes before enabling a setup journal or performance analytics.
+5. Add centralized provider quota budgeting, provider-health telemetry, and market-hours/delay metadata.
+6. Validate authenticated user isolation, watchlists, and storage against live Supabase using dedicated test accounts.
 
-Public demo users should be able to explore the workflow; they should not infer that simulation readiness means live-trading readiness.
+Live technical classifications are not financial advice, probabilities, or trade instructions.

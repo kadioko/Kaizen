@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseLiveSpotSeries, isLiveSpotSymbol, liveSpotAge } from '../lib/live-spot.ts';
 import { nextUpcomingFomcEvents } from '../lib/fomc-schedule.ts';
+import { analyzeLivePriceAction } from '../lib/live-price-action.ts';
 
 const now = Date.parse('2026-09-22T12:01:00Z');
 const livePayload = (symbol = 'EUR/USD') => ({
@@ -52,4 +53,36 @@ test('official FOMC parser returns only future published meeting dates', () => {
 test('official FOMC parser rejects unparseable rows instead of inventing calendar events', () => {
   const html = '<h4><a id="one">2027 FOMC Meetings</a></h4><div class="fomc-meeting__month"><strong>Smarch</strong></div><div class="fomc-meeting__date">30-31</div>';
   assert.deepEqual(nextUpcomingFomcEvents(html, new Date('2026-09-22T12:00:00Z')), []);
+});
+
+function marketFromBars(bars) {
+  return {
+    provider: 'Twelve Data', market: 'XAU/USD', asset_class: 'spot_metal', interval: '1min',
+    price: bars.at(-1).close, as_of: new Date(bars.at(-1).time * 1000).toISOString(),
+    fetched_at: '2026-09-22T12:00:00.000Z', freshness_seconds: 0, freshness: 'RECENT_BAR', bars,
+    limitations: [],
+  };
+}
+
+test('live price-action engine derives structure and range acceptance from supplied OHLC only', () => {
+  const bars = Array.from({ length: 30 }, (_, index) => {
+    const close = 4000 + index * 0.5;
+    return { time: 1_789_776_000 + index * 60, open: close - 0.2, high: close + 0.4, low: close - 0.5, close };
+  });
+  const analysis = analyzeLivePriceAction(marketFromBars(bars));
+  assert.equal(analysis.structure.direction, 'BULLISH');
+  assert.equal(analysis.range_interaction.direction, 'BULLISH');
+  assert.equal(analysis.alignment, 'STRUCTURE_AND_RANGE_ALIGNED');
+  assert.match(analysis.events[0].description, /OHLC|range|source bar/i);
+  assert.ok(analysis.levels.every((level) => Number.isFinite(level.price) && level.touches >= 0));
+});
+
+test('live price-action engine flags a rejected upper range without calling it order flow', () => {
+  const bars = Array.from({ length: 29 }, (_, index) => ({ time: 1_789_776_000 + index * 60, open: 100, high: 100.5, low: 99.5, close: 100 }));
+  bars.push({ time: 1_789_776_000 + 29 * 60, open: 100, high: 102, low: 99.4, close: 99.8 });
+  const analysis = analyzeLivePriceAction(marketFromBars(bars));
+  assert.equal(analysis.range_interaction.direction, 'BEARISH');
+  assert.equal(analysis.state, 'RANGE_REJECTION');
+  assert.match(analysis.range_interaction.summary, /not exchange liquidity data/i);
+  assert.equal('order_flow' in analysis, false);
 });

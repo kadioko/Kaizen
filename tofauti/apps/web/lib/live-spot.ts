@@ -89,7 +89,7 @@ export function parseLiveSpotSeries(payload: unknown, market: LiveSpotSymbol, no
     limitations: [
       'Provider-reported one-minute spot bar close. It is not an executable quote and the latest bar may still be forming.',
       'This feed does not contain COMEX futures prices, exchange depth, trade aggressor data, delta, or order flow.',
-      'The feed is displayed separately from TOFAUTI’s GC/MGC simulation and cannot create a setup, probability, or trade instruction.',
+      'The feed can support transparent spot price-action calculations, but cannot create a probability, a true order-flow conclusion, or a trade instruction.',
     ],
   };
 }

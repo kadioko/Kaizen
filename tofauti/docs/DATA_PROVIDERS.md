@@ -1,37 +1,29 @@
 # Data Providers
 
-## Provider Interfaces
+## Public Spot Provider
 
-`MarketDataProvider` defines `connect`, `disconnect`, `subscribe`, `trades`, `quotes`, and `historical`. Every implementation must normalize vendor data to `MarketTick` before it enters an engine.
+`/api/market/spot` retrieves selected `XAU/USD`, `EUR/USD`, `GBP/USD`, and `USD/JPY` one-minute bars through a server-only `TWELVE_DATA_API_KEY`. It validates the exact symbol, interval, timestamps, OHLC consistency, duplicate bars, and future timestamps before returning a result.
 
-`MacroDataProvider` normalizes named macro factors with a state, directional effect, score, timestamp, and source.
+Requests are coalesced per symbol, cached for five minutes, and rate-limit failures back off for 30 minutes. This reduces upstream use but does not provide a global quota budget across regions or other applications sharing a key.
 
-## V0.1: Mock Only
+The public UI uses these bars only for transparent spot price-action calculations. It must not relabel them as COMEX futures or derive trade aggressor side, exchange volume, delta, cumulative delta, depth, DOM, order flow, or exchange liquidity from candle movement.
 
-`MockMarketDataProvider` produces deterministic GC/MGC prices, bid/ask, volume, aggressive trade direction, and buy/sell volume. It is clearly labeled in UI/API responses as simulation. No screen claims exchange data, institutional order flow, or a live professional feed.
+## Official Macro Schedule
 
-## V0.3: Twelve Data Spot References
+`/api/macro/us-risk` reads the Federal Reserve's published FOMC calendar. It exposes only future meeting dates and a source URL. It does not invent event times, forecasts, released values, or directional effect.
 
-The Next.js server route at `/api/market/spot` fetches the user-selected `XAU/USD`, `EUR/USD`, `GBP/USD`, or `USD/JPY` one-minute bars using a server-only `TWELVE_DATA_API_KEY`. The displayed price and timestamp belong to the same bar. Requests are coalesced per market per server instance, cached for five minutes and shared through CDN response caching. Hidden tabs pause polling; provider quota failures trigger a 30-minute backoff. This reduces usage but is not a global quota guarantee across regions or other apps sharing the key. A centralized quota ledger remains necessary for scale.
+## Offline Development Harness
 
-OHLC values, positive prices, unique timestamps, requested market symbol, interval and future timestamps are validated. The request explicitly asks for UTC; `exchange_timezone` describes the source venue and need not match the requested output timezone. `RECENT BAR` means the bar start is no older than six minutes, not that the market is open or the price executable. UI age advances even between fetches. Source format: [Twelve Data API documentation](https://twelvedata.com/docs).
+`MockMarketDataProvider` remains in the FastAPI workspace for adapter and engine tests. It is not mounted by the public web application and must never be called live market data.
 
-This is a price-reference layer, not a `MarketDataProvider` implementation: `XAU/USD` must not be relabeled as COMEX `GC` or `MGC`, and none of the supported spot references can supply trade aggressor side, bid/ask depth, exchange volume, or order flow. The UI therefore presents them separately and prevents them from informing the replay's order-flow, liquidity, alignment, score, or setup state.
+## Future Futures Provider
 
-## V0.3: Official Macro Risk
+`DatabentoMarketDataProvider` or a similarly entitled CME adapter must normalize raw vendor messages to the existing provider contract without changing analytics-engine interfaces. Validate contract mapping, rollover, source timestamps, trade-aggressor rules, reconnect behavior, and the entitlement itself at that boundary before enabling GC/MGC public screens.
 
-`/api/macro/us-risk` reads upcoming FOMC meeting dates from the [Federal Reserve calendar](https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm). It is source-backed scheduled-risk context only: TOFAUTI does not assign market direction, invent release times, or simulate actual/consensus values. A licensed calendar provider remains necessary for a complete global event schedule and released data.
+## Data Quality Rules
 
-## Future Databento/CME Adapter
-
-Create `DatabentoMarketDataProvider` in this package. It must translate the vendor response to the existing `MarketTick` contract and must not alter an engine signature. Validate exchange entitlements, symbol mappings, timestamps, trade aggressor rules, and reconnect behavior at that boundary.
-
-No Databento/CME adapter is enabled because no provider key, exchange entitlement, or user-approved symbol mapping has been configured. The GC/MGC engine continues to identify its source as deterministic replay until that boundary is connected and verified.
-
-## Data Quality Requirements
-
-- Preserve source timestamps and source names.
-- Reject invalid bid/ask, non-positive volume, and out-of-order inputs before aggregation.
-- Persist raw input before derived buckets in production mode.
-- Distinguish delayed, replayed, mock, and real sources in every user-facing view.
-- Never describe a data source with a venue or quality label it has not earned.
+- Preserve source name, timestamp, symbol, asset class, and freshness in every user-facing display.
+- Reject malformed or out-of-order inputs before calculation.
+- Persist raw input before derived data when durable ingestion is enabled.
+- Withhold a metric when the source cannot support it.
+- Never label delayed, spot, replayed, or mock data as live futures or exchange order flow.

@@ -7,10 +7,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "apps" / "api"))
 from app.main import app  # noqa: E402
 
 
-def test_api_starts_and_streams_valid_simulated_gc_and_mgc():
+def test_api_starts_and_streams_independent_simulated_gc_and_mgc():
     with TestClient(app) as client:
         health = client.get("/health").json()
-        assert health["provider"] == "MockMarketDataProvider"
+        assert health["market_data_provider"] == "mock"
+        assert set(health["runtimes"]) == {"GC", "MGC"}
         for symbol in ["GC", "MGC"]:
             response = client.get(f"/api/snapshot/{symbol}")
             assert response.status_code == 200
@@ -22,5 +23,8 @@ def test_api_starts_and_streams_valid_simulated_gc_and_mgc():
         assert client.get("/api/setups/MGC").json() == []
         assert client.post("/api/demo/scenario", json={"scenario": "mixed"}).status_code == 403
         assert client.post("/api/analyst/query", json={"question": "x" * 2001}).status_code == 422
+        calendar = client.get("/api/calendar").json()
+        assert calendar["availability"] == "UNAVAILABLE"
+        assert calendar["events"] == []
         cors = client.options("/api/snapshot/GC", headers={"Origin": "https://tofauti.vercel.app", "Access-Control-Request-Method": "GET"})
         assert cors.headers["access-control-allow-origin"] == "https://tofauti.vercel.app"

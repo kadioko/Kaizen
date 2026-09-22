@@ -4,6 +4,8 @@ export interface OfficialMacroEvent {
   date: string;
   duration_days: number;
   severity: 'HIGH';
+  expected_volatility_impact: 'HIGH';
+  impact_basis: string;
   source_name: 'Federal Reserve';
   source_url: string;
   timing_note: string;
@@ -15,6 +17,7 @@ export interface OfficialMacroSchedule {
   fetched_at: string;
   events: OfficialMacroEvent[];
   coverage_note: string;
+  impact_boundary: string;
 }
 
 export class OfficialMacroUnavailable extends Error {

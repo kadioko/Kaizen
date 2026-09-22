@@ -6,7 +6,7 @@ Set `CORS_ORIGINS` on FastAPI to the exact frontend origins (comma-separated). B
 
 `/health` now includes `persistence_status`: `in_memory`, `pending`, `healthy` or `degraded`. Configured Supabase credentials alone do not prove writes are succeeding. Verify stored rows and restart recovery before calling cloud persistence operational.
 
-The selected spot-reference route serves `XAU/USD`, `EUR/USD`, `GBP/USD`, and `USD/JPY` one-minute bars with per-market five-minute server caching and CDN caching. Provider HTTP 429 responses back off for 30 minutes and are shown explicitly. Multiple regions or other apps can still share/exhaust the upstream allowance; a central budget is not implemented. Never expose `TWELVE_DATA_API_KEY` to browser code. The official FOMC schedule route needs no secret and does not provide a global news calendar.
+The selected spot-reference route serves `XAU/USD`, `EUR/USD`, `GBP/USD`, and `USD/JPY` one-minute bars with per-market five-minute server caching and CDN caching. Provider HTTP 429 responses back off for 30 minutes and are shown explicitly. Multiple regions or other apps can still share/exhaust the upstream allowance; a central budget is not implemented. Never expose `TWELVE_DATA_API_KEY` to browser code. The official FOMC schedule route needs no secret and labels published FOMC dates as `HIGH` scheduled volatility risk; it does not provide a global calendar or directional forecast.
 
 Add the deployed `/settings` URL to Supabase Auth's redirect allowlist for email confirmations. Verify watchlist instruments are seeded and use separate test accounts to check RLS. These live account checks are still pending.
 
@@ -30,10 +30,32 @@ The migration uses `tofauti_`-prefixed tables so TOFAUTI can safely share the Ka
 
 ## 2. Deploy FastAPI
 
-Create a Docker web service from this repository with `tofauti` as the service root. Configure these server-only environment variables:
+Create a Docker web service from this repository with `tofauti` as the service root. The supplied `render.yaml` is deliberately configured for live mode and will not start until all secret values are present. Configure these server-only environment variables:
+
+```text
+DEMO_MODE=false
+MARKET_DATA_PROVIDER=databento
+DATABENTO_DATASET=GLBX.MDP3
+DATABENTO_API_KEY=YOUR_ENTITLED_SERVER_ONLY_DATABENTO_KEY
+ECONOMIC_CALENDAR_PROVIDER=trading_economics
+TRADING_ECONOMICS_API_KEY=YOUR_SERVER_ONLY_TRADING_ECONOMICS_KEY
+CALENDAR_COUNTRIES=united states
+ALLOW_DEMO_CONTROLS=false
+REDIS_ENABLED=false
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVER_ONLY_KEY
+```
+
+Apply `20260922103000_add_live_provider_provenance.sql` after the base TOFAUTI migration. It adds raw-provider provenance, unknown-volume accounting, macro availability, nullable live scenario values, and licensed calendar archival.
+
+Do not set `NEXT_PUBLIC_API_URL` until `GET /health` returns `mode: live`, `market_data_provider: databento`, two running runtimes, and source metadata that names `Databento` / `GLBX.MDP3`. The detailed validation sequence is in [Live Futures Runbook](LIVE_FUTURES_RUNBOOK.md).
+
+For local deterministic tests only:
 
 ```text
 DEMO_MODE=true
+MARKET_DATA_PROVIDER=mock
+ECONOMIC_CALENDAR_PROVIDER=none
 REDIS_ENABLED=false
 SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVER_ONLY_KEY

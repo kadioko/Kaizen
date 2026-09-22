@@ -7,7 +7,7 @@ TOFAUTI is an explainable live spot-market price-action workspace. It does not i
 - Live provider-reported one-minute OHLC bars: `XAU/USD`, `EUR/USD`, `GBP/USD`, and `USD/JPY` through a server-side Twelve Data bridge.
 - Live calculated price-action context: recent structure, rolling high/low references, round-number references, range acceptance, and range rejection observations.
 - Live source-bar timeline: timestamped observations derived only from the returned OHLC bars.
-- Official macro-risk schedule: upcoming FOMC meeting dates from the Federal Reserve.
+- Official macro-risk schedule: upcoming FOMC meeting dates from the Federal Reserve, labelled as `HIGH` expected volatility risk with an explicit non-directional boundary.
 - Persistent auth and watchlist interfaces remain separately scoped through Supabase.
 
 The public web application no longer mounts the browser replay provider or displays GC/MGC simulated prices, delta, setups, or replay controls.
@@ -40,7 +40,7 @@ Set `TWELVE_DATA_API_KEY` in `apps/web/.env.local` for local live spot reference
 ## Public API Routes
 
 - `GET /api/market/spot?symbol=XAU%2FUSD` supports the four listed spot symbols, validates returned OHLC, and caches each selected symbol for five minutes.
-- `GET /api/macro/us-risk` reads and caches the official Federal Reserve FOMC schedule. It is scheduled-risk context only, not an impact forecast.
+- `GET /api/macro/us-risk` reads and caches the official Federal Reserve FOMC schedule. FOMC is labelled `HIGH` expected volatility risk because it is a scheduled policy decision for USD-linked markets. The label is not a forecast of price direction, size, or trade outcome.
 
 ## Verification
 
@@ -52,8 +52,18 @@ npm run build:web
 python -m pytest tests -q
 ```
 
-## Future Provider Path
+## Live Futures Engine
 
-The FastAPI mock engine and its deterministic scenarios remain an offline development harness for adapter tests. They are not used by the public frontend. Before enabling a live futures/order-flow workspace, connect an entitled provider such as Databento/CME behind the existing provider interfaces, validate source quality, and store raw input before derived calculations.
+The FastAPI workspace now contains a `DatabentoMarketDataProvider` for `GC.FUT` and `MGC.FUT` on the entitled `GLBX.MDP3` dataset. It consumes `MBP-1` records, preserves source provenance, and classifies aggressor side only when a trade can be matched to the current top-of-book. Unmatched trades are stored as unknown volume and are not forced into delta.
 
-Read [Data Providers](docs/DATA_PROVIDERS.md), [Architecture](docs/ARCHITECTURE.md), [Market Engine](docs/MARKET_ENGINE.md), and [Roadmap](docs/ROADMAP.md) before adding a provider.
+The adapter is implemented but intentionally inactive until its required server-only entitlement is configured. Use the [live futures runbook](docs/LIVE_FUTURES_RUNBOOK.md) to apply the Supabase migration, deploy the persistent container service, configure secrets, validate `/health`, then connect the Vercel frontend. The public site must continue to show the live spot-only boundary until that verification succeeds.
+
+Read [Data Providers](docs/DATA_PROVIDERS.md), [Architecture](docs/ARCHITECTURE.md), [Deployment](docs/DEPLOYMENT.md), [Live Futures Runbook](docs/LIVE_FUTURES_RUNBOOK.md), [Market Engine](docs/MARKET_ENGINE.md), and [Roadmap](docs/ROADMAP.md) before enabling a provider.
+
+## Dependency Policy
+
+The web workspace is verified with Next.js 16, React 19, Tailwind 4, TypeScript 7, Lightweight Charts 5, Lucide 1, Supabase JS 2, and ESLint 9. `npm audit --omit=dev` reports no production vulnerabilities. ESLint stays on its newest compatible 9.x release because the current Next.js ESLint integration is not compatible with ESLint 10.
+
+The FastAPI workspace uses the latest compatible FastAPI, Uvicorn, Pydantic, and Databento releases. `databento-dbn` and `pydantic-core` remain on the exact versions required by their respective parent packages; they must not be independently forced forward.
+
+For an evidence-based feature inventory inspired by general market-intelligence dashboard capabilities, see [Capability Audit](docs/CAPABILITY_AUDIT.md). TOFAUTI uses its own product identity and does not copy third-party branding, layouts, or claims.

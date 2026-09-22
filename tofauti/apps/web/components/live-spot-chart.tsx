@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { ColorType, createChart, type IChartApi, type ISeriesApi, type UTCTimestamp } from 'lightweight-charts';
+import { CandlestickSeries, ColorType, createChart, type IChartApi, type ISeriesApi, type UTCTimestamp } from 'lightweight-charts';
 import type { LiveSpotMarket } from '@/lib/live-spot';
 
 export function LiveSpotChart({ market }: { market: LiveSpotMarket }) {
@@ -21,7 +21,7 @@ export function LiveSpotChart({ market }: { market: LiveSpotMarket }) {
       timeScale: { borderColor: 'rgba(255,255,255,.1)', timeVisible: true },
     });
     chartRef.current = chart;
-    seriesRef.current = chart.addCandlestickSeries({ upColor: '#45d9a2', downColor: '#fb7185', borderVisible: false, wickUpColor: '#45d9a2', wickDownColor: '#fb7185' });
+    seriesRef.current = chart.addSeries(CandlestickSeries, { upColor: '#45d9a2', downColor: '#fb7185', borderVisible: false, wickUpColor: '#45d9a2', wickDownColor: '#fb7185' });
     const observer = new ResizeObserver(() => chart.applyOptions({ width: container.clientWidth }));
     observer.observe(container);
     return () => { observer.disconnect(); chart.remove(); chartRef.current = null; seriesRef.current = null; };

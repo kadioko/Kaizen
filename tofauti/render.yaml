@@ -7,7 +7,21 @@ services:
     healthCheckPath: /health
     envVars:
       - key: DEMO_MODE
-        value: "true"
+        value: "false"
+      - key: MARKET_DATA_PROVIDER
+        value: "databento"
+      - key: DATABENTO_DATASET
+        value: "GLBX.MDP3"
+      - key: DATABENTO_API_KEY
+        sync: false
+      - key: ECONOMIC_CALENDAR_PROVIDER
+        value: "trading_economics"
+      - key: TRADING_ECONOMICS_API_KEY
+        sync: false
+      - key: CALENDAR_COUNTRIES
+        value: "united states"
+      - key: CORS_ORIGINS
+        value: "https://tofauti.vercel.app"
       - key: REDIS_ENABLED
         value: "false"
       - key: SUPABASE_URL

@@ -23,7 +23,8 @@ async function fetchSchedule(): Promise<OfficialMacroSchedule> {
     source_url: FEDERAL_RESERVE_FOMC_URL,
     fetched_at: new Date().toISOString(),
     events,
-    coverage_note: 'Official FOMC meeting dates only. This is a risk schedule, not a market-impact forecast. A licensed economic-calendar provider is required for global events, consensus, and released values.',
+    coverage_note: 'Official FOMC meeting dates only. A licensed economic-calendar provider is required for global events, consensus, and released values.',
+    impact_boundary: 'High, medium, and low describe expected volatility sensitivity from the event category or licensed provider importance. They are not a price-direction forecast, trade signal, or probability.',
   };
 }
 

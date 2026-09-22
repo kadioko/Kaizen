@@ -19,6 +19,14 @@ class Strength(StrEnum):
     STRONG = "STRONG"
 
 
+class DataAvailability(StrEnum):
+    """Whether a quantitative layer has the source inputs it requires."""
+
+    AVAILABLE = "AVAILABLE"
+    SCHEDULE_ONLY = "SCHEDULE_ONLY"
+    UNAVAILABLE = "UNAVAILABLE"
+
+
 class WarRoomState(StrEnum):
     SCANNING = "SCANNING"
     LEVEL_APPROACHING = "LEVEL_APPROACHING"
@@ -60,6 +68,10 @@ class MarketTick(BaseModel):
     aggressive_side: Direction
     buy_volume: int
     sell_volume: int
+    unknown_volume: int = 0
+    source: str = "unknown"
+    raw_symbol: str | None = None
+    aggressor_side_source: str = "unknown"
 
 
 class Trade(BaseModel):
@@ -84,6 +96,7 @@ class OrderFlowBucket(BaseModel):
     timeframe: str
     buy_volume: int
     sell_volume: int
+    unknown_volume: int = 0
     total_volume: int
     delta: int
     delta_change: int
@@ -126,6 +139,7 @@ class LayerState(BaseModel):
     strength: Strength
     summary: str
     evidence: dict[str, Any] = Field(default_factory=dict)
+    availability: DataAvailability = DataAvailability.AVAILABLE
 
 
 class StructureState(LayerState):
@@ -142,6 +156,25 @@ class LiquidityState(LayerState):
 
 class MacroState(LayerState):
     factors: list[MacroFactor]
+
+
+class EconomicCalendarEvent(BaseModel):
+    """Licensed calendar data. It is risk context, not a directional market call."""
+
+    id: str
+    title: str
+    scheduled_at: datetime
+    country: str | None = None
+    currency: str | None = None
+    importance: int = Field(ge=1, le=3)
+    expected_volatility_impact: str = Field(pattern="^(LOW|MEDIUM|HIGH)$")
+    impact_basis: str
+    actual: str | None = None
+    forecast: str | None = None
+    previous: str | None = None
+    revised: str | None = None
+    source: str
+    source_url: str | None = None
 
 
 class AlignmentState(LayerState):
@@ -196,7 +229,7 @@ class MarketSnapshot(BaseModel):
     timestamp: datetime
     price: float
     change: float
-    scenario: DemoScenario
+    scenario: DemoScenario | None = None
     war_room_state: WarRoomState
     macro: MacroState
     structure: LayerState

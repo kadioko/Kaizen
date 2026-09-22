@@ -6,6 +6,7 @@ from math import copysign, floor
 
 from .models import (
     AlignmentState,
+    DataAvailability,
     DemoScenario,
     Direction,
     LayerState,
@@ -52,8 +53,9 @@ class OrderFlowEngine:
             raise ValueError("Only 1m and 5m buckets are supported.")
         groups = defaultdict(list)
         for tick in sorted(ticks, key=lambda item: item.timestamp):
-            if tick.volume < 0 or min(tick.buy_volume, tick.sell_volume) < 0 or tick.volume != tick.buy_volume + tick.sell_volume:
-                raise ValueError("Tick volume must equal nonnegative buy plus sell volume.")
+            components = tick.buy_volume + tick.sell_volume + tick.unknown_volume
+            if tick.volume < 0 or min(tick.buy_volume, tick.sell_volume, tick.unknown_volume) < 0 or tick.volume != components:
+                raise ValueError("Tick volume must equal nonnegative classified plus unknown volume.")
             start = int(tick.timestamp.timestamp()) // (timeframe_minutes * 60) * (timeframe_minutes * 60)
             groups[start].append(tick)
         if not groups:
@@ -65,12 +67,13 @@ class OrderFlowEngine:
         for start, group in sorted(groups.items()):
             buy = sum(tick.buy_volume for tick in group)
             sell = sum(tick.sell_volume for tick in group)
-            volume = buy + sell
+            unknown = sum(tick.unknown_volume for tick in group)
+            volume = buy + sell + unknown
             delta = buy - sell
             cumulative += delta
             buckets.append(OrderFlowBucket(
                 start=datetime.fromtimestamp(start, UTC), timeframe=f"{timeframe_minutes}m",
-                buy_volume=buy, sell_volume=sell, total_volume=volume, delta=delta,
+                buy_volume=buy, sell_volume=sell, unknown_volume=unknown, total_volume=volume, delta=delta,
                 delta_change=delta - previous_delta if previous_delta is not None else 0,
                 cumulative_delta=cumulative,
                 buy_percentage=round(buy / volume * 100, 1) if volume else 0,
@@ -100,6 +103,7 @@ class OrderFlowEngine:
                 "cumulative_delta": latest.cumulative_delta,
                 "buy_percentage": latest.buy_percentage,
                 "sell_percentage": latest.sell_percentage,
+                "unknown_volume": latest.unknown_volume,
                 "volume_acceleration": latest.volume_acceleration,
                 "recent_deltas": deltas[-3:],
             },
@@ -107,31 +111,17 @@ class OrderFlowEngine:
 
 
 class StructureEngine:
-    def __init__(self) -> None:
-        self.levels = [
-            MarketLevel(id="gc-supply", type="Supply", price=3351.0, strength=Strength.STRONG, touches=3),
-            MarketLevel(id="gc-vwap", type="VWAP", price=3347.5, strength=Strength.MODERATE, touches=2),
-            MarketLevel(id="gc-demand", type="Demand", price=3343.5, strength=Strength.STRONG, touches=2),
-            MarketLevel(id="gc-pdh", type="Previous day high", price=3350.5, strength=Strength.MODERATE, touches=1),
-            MarketLevel(id="gc-pdl", type="Previous day low", price=3338.0, strength=Strength.MODERATE, touches=1),
-            MarketLevel(id="gc-round", type="Round number", price=3350.0, strength=Strength.WEAK, touches=4),
-        ]
-
     def build(self, ticks: list[MarketTick]) -> tuple[LayerState, list[MarketLevel], list[OHLCVBar]]:
         recent = ticks
         if not recent:
-            return StructureState(direction=Direction.NEUTRAL, score=0, strength=Strength.WEAK, summary="Waiting for enough ticks to map structure."), self.levels, []
+            return StructureState(direction=Direction.NEUTRAL, score=0, strength=Strength.WEAK, summary="Waiting for enough ticks to map structure."), [], []
         weighted_price = sum(tick.price * tick.volume for tick in recent) / max(sum(tick.volume for tick in recent), 1)
         latest = recent[-1]
         price_change = latest.price - recent[0].price
         vwap_distance = latest.price - weighted_price
         score = clamp_score(price_change * 22 + vwap_distance * 18)
         direction = direction_for(score)
-        for level in self.levels:
-            if level.type == "VWAP":
-                level.price = round(weighted_price, 2)
-            if abs(level.price - latest.price) <= 0.35:
-                level.last_interaction = latest.timestamp
+        levels = self._levels(recent, weighted_price)
         bars = [
             OHLCVBar(
                 time=int(tick.timestamp.timestamp()),
@@ -149,16 +139,54 @@ class StructureEngine:
             strength=strength_for(score),
             summary=f"Price is {abs(vwap_distance):.1f} points {'above' if vwap_distance >= 0 else 'below'} session VWAP with a {price_change:+.1f}-point recent move.",
             evidence={"vwap": round(weighted_price, 2), "recent_change": round(price_change, 2), "session_high": max(t.price for t in recent), "session_low": min(t.price for t in recent)},
-        ), self.levels, bars
+        ), levels, bars
+
+    @staticmethod
+    def _levels(ticks: list[MarketTick], vwap: float) -> list[MarketLevel]:
+        """Build price-relative references from observed ticks, never demo prices."""
+        latest = ticks[-1]
+        prior = ticks[:-1] or ticks
+        prices = [tick.price for tick in ticks]
+        prior_prices = [tick.price for tick in prior]
+        average_move = sum(abs(current - previous) for previous, current in zip(prices, prices[1:])) / max(len(prices) - 1, 1)
+        tolerance = max(average_move * 0.35, abs(latest.ask - latest.bid), 0.00001)
+        digits = 2 if latest.price >= 100 else 5
+        round_step = 10 if latest.price >= 1_000 else 1 if latest.price >= 100 else 0.01 if latest.price >= 1 else 0.001
+        round_number = round(latest.price / round_step) * round_step
+
+        def level(name: str, level_type: str, price: float, strength: Strength) -> MarketLevel:
+            touches = sum(abs(tick.price - price) <= tolerance for tick in ticks)
+            interactions = [tick.timestamp for tick in ticks if abs(tick.price - price) <= tolerance]
+            return MarketLevel(
+                id=f"{latest.symbol.lower()}-{name}",
+                type=level_type,
+                price=round(price, digits),
+                strength=strength,
+                touches=touches,
+                last_interaction=interactions[-1] if interactions else None,
+            )
+
+        return [
+            level("vwap", "VWAP", vwap, Strength.MODERATE),
+            level("session-high", "Session high", max(prices), Strength.MODERATE),
+            level("session-low", "Session low", min(prices), Strength.MODERATE),
+            level("supply", "Supply", max(prior_prices), Strength.STRONG),
+            level("demand", "Demand", min(prior_prices), Strength.STRONG),
+            level("round", "Round number", round_number, Strength.WEAK),
+        ]
 
 
 class LiquidityEngine:
-    def build(self, ticks: list[MarketTick], flow: LayerState) -> tuple[LayerState, list[LiquidityEvent]]:
+    def build(self, ticks: list[MarketTick], flow: LayerState, levels: list[MarketLevel] | None = None) -> tuple[LayerState, list[LiquidityEvent]]:
         recent = ticks
         if len(recent) < 3:
             return LiquidityState(direction=Direction.NEUTRAL, score=0, strength=Strength.WEAK, summary="Waiting for a level interaction."), []
-        supply = 3351.0
-        demand = 3343.5
+        references = levels or [
+            MarketLevel(id="demo-supply", type="Supply", price=3351.0, strength=Strength.STRONG),
+            MarketLevel(id="demo-demand", type="Demand", price=3343.5, strength=Strength.STRONG),
+        ]
+        supply = next(level.price for level in references if level.type == "Supply")
+        demand = next(level.price for level in references if level.type == "Demand")
         latest = recent[-1]
         max_price = max(tick.price for tick in recent)
         min_price = min(tick.price for tick in recent)
@@ -177,18 +205,53 @@ class LiquidityEngine:
 
 class MacroEngine:
     def build(self, factors) -> MacroState:
-        score = clamp_score(sum(factor.score for factor in factors) / len(factors)) if factors else 0
+        if not factors:
+            return MacroState(
+                direction=Direction.NEUTRAL,
+                score=0,
+                strength=Strength.WEAK,
+                summary="No directional macro inputs are connected. Scheduled releases must not be treated as a macro bias.",
+                evidence={"reason": "Directional macro inputs unavailable"},
+                availability=DataAvailability.UNAVAILABLE,
+                factors=[],
+            )
+        score = clamp_score(sum(factor.score for factor in factors) / len(factors))
         direction = direction_for(score)
-        return MacroState(direction=direction, score=score, strength=strength_for(score), summary=f"Mock macro basket is {direction.value.lower()} from configured USD, real-yield, sentiment, inflation, and central-bank factors.", evidence={"factor_scores": {factor.name: factor.score for factor in factors}}, factors=factors)
+        return MacroState(direction=direction, score=score, strength=strength_for(score), summary=f"Macro basket is {direction.value.lower()} from the configured source factors.", evidence={"factor_scores": {factor.name: factor.score for factor in factors}}, factors=factors)
 
 
 class AlignmentEngine:
     def build(self, macro: LayerState, structure: LayerState, flow: LayerState, liquidity: LayerState) -> AlignmentState:
-        scores = [macro.score, structure.score, flow.score, liquidity.score]
+        layers = {
+            "macro": macro,
+            "structure": structure,
+            "order_flow": flow,
+            "liquidity": liquidity,
+        }
+        available_layers = {name: layer for name, layer in layers.items() if layer.availability == DataAvailability.AVAILABLE}
+        unavailable_layers = [name for name, layer in layers.items() if layer.availability != DataAvailability.AVAILABLE]
+        scores = [layer.score for layer in available_layers.values()]
+        if not scores:
+            return AlignmentState(
+                direction=Direction.NEUTRAL,
+                score=0,
+                strength=Strength.WEAK,
+                state="INSUFFICIENT_DATA",
+                summary="No quantitative layers have verified source inputs.",
+                evidence={"unavailable_layers": unavailable_layers},
+                availability=DataAvailability.UNAVAILABLE,
+            )
         average = clamp_score(sum(scores) / len(scores))
         bearish = sum(score <= -12 for score in scores)
         bullish = sum(score >= 12 for score in scores)
-        if bearish == 4:
+        if len(available_layers) < len(layers):
+            if bearish > bullish and bearish:
+                state = "INCOMPLETE_BEARISH_ALIGNMENT"
+            elif bullish > bearish and bullish:
+                state = "INCOMPLETE_BULLISH_ALIGNMENT"
+            else:
+                state = "INCOMPLETE_MIXED_ALIGNMENT"
+        elif bearish == 4:
             state = "FULL_BEARISH_ALIGNMENT"
         elif bullish == 4:
             state = "FULL_BULLISH_ALIGNMENT"
@@ -204,4 +267,12 @@ class AlignmentEngine:
             state = "PARTIAL_BULLISH_ALIGNMENT"
         else:
             state = "MIXED" if any(scores) else "NEUTRAL"
-        return AlignmentState(direction=direction_for(average), score=average, strength=strength_for(average), state=state, summary=f"{state.replace('_', ' ').title()} based on the four calculated layers.", evidence={"macro": macro.score, "structure": structure.score, "order_flow": flow.score, "liquidity": liquidity.score})
+        return AlignmentState(
+            direction=direction_for(average),
+            score=average,
+            strength=strength_for(average),
+            state=state,
+            summary=f"{state.replace('_', ' ').title()} based on verified available layers.",
+            evidence={**{name: layer.score for name, layer in layers.items()}, "unavailable_layers": unavailable_layers},
+            availability=DataAvailability.AVAILABLE if not unavailable_layers else DataAvailability.SCHEDULE_ONLY,
+        )

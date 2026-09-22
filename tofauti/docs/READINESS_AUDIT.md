@@ -10,13 +10,13 @@ TOFAUTI's public web app is a live spot price-action workspace. It is not a live
 - `XAU/USD`, `EUR/USD`, `GBP/USD`, and `USD/JPY` use the server-side Twelve Data route. The response validates requested symbol, one-minute interval, positive OHLC, timestamp ordering, duplicate timestamps, and future timestamps.
 - The visible latest price and timestamp always come from the same provider bar. Cache and provider-quota failures render an explicit unavailable state; a simulated quote is never substituted.
 - Structure, rolling high/low references, round-number references, range acceptance/rejection, and timeline observations are derived from returned OHLC bars only.
-- Macro direction is withheld. The only live macro source is the official Federal Reserve FOMC schedule, presented as scheduled risk rather than a market-impact forecast.
+- Macro direction is withheld. The only live macro source is the official Federal Reserve FOMC schedule. FOMC dates are marked `HIGH` expected volatility risk with a published non-directional explanation, not a market-impact forecast.
 - True order flow is withheld. The current feed does not expose exchange trades, volume, aggressor side, delta, cumulative delta, depth, DOM, or liquidity.
 - Secondary Macro, Order Flow, Levels, Journal, and Settings routes use the same live source or explicitly state unavailable coverage.
 
 ## Verification
 
-- Seven live-data tests cover malformed provider data, source-symbol classification, timestamps, FOMC calendar parsing, live structure/range calculations, and rejection handling without order-flow fields.
+- Seven live-data tests cover malformed provider data, source-symbol classification, timestamps, FOMC calendar parsing and impact boundaries, live structure/range calculations, and rejection handling without order-flow fields.
 - Python engine tests remain for the offline provider-adapter harness.
 - ESLint, TypeScript, and Next.js production build must pass before every deployment.
 

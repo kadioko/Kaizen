@@ -30,6 +30,8 @@ export function nextUpcomingFomcEvents(html: string, now = new Date()): Official
         date,
         duration_days: Math.max(1, endDay - Number(row[2]) + 1),
         severity: 'HIGH',
+        expected_volatility_impact: 'HIGH',
+        impact_basis: 'FOMC policy decisions are scheduled high-volatility risk events for USD-linked markets. Direction and magnitude are not estimated.',
         source_name: 'Federal Reserve',
         source_url: FEDERAL_RESERVE_FOMC_URL,
         timing_note: 'Meeting dates are published by the Federal Reserve. Check the official release schedule for statement and press-conference times.',

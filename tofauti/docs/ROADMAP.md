@@ -4,7 +4,7 @@
 
 - ✅ Public War Room uses verified live spot OHLC bars for `XAU/USD`, `EUR/USD`, `GBP/USD`, and `USD/JPY`.
 - ✅ Public technical state, rolling levels, range acceptance/rejection, and timeline observations are derived from returned source bars.
-- ✅ Official FOMC dates are shown as source-backed scheduled risk without an invented impact forecast.
+- ✅ Official FOMC dates are shown as source-backed `HIGH` scheduled volatility risk, never as a directional forecast.
 - ✅ Browser replay is removed from the public app and all secondary screens.
 - 🔴 GC/MGC futures, true exchange order flow, and directional macro inputs require dedicated verified providers.
 - 🔴 Durable setup history, observed outcomes, and server persistence still need a hosted ingestion pipeline.
@@ -23,7 +23,7 @@
 
 ## Phase 3: Live Context and Alerts
 
-- Licensed economic calendar with global events, consensus, released values, and source attribution.
+- Licensed economic calendar with global events, consensus, released values, source attribution, and transparent `LOW` / `MEDIUM` / `HIGH` volatility-impact labels.
 - Verified macro inputs for USD, real yields, inflation, risk sentiment, and central-bank demand.
 - Server-side alerts and web/mobile notification strategy.
 

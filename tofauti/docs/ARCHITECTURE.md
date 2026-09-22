@@ -2,7 +2,7 @@
 
 ## Current Public Web Mode
 
-The deployed Next.js application does not connect to the FastAPI mock runtime. It obtains selected spot OHLC bars through `/api/market/spot`, reads the official FOMC calendar through `/api/macro/us-risk`, and derives only transparent price-action classifications from those sources. True order flow, directional macro, GC/MGC futures, setups, and durable outcomes are withheld until dedicated providers are integrated.
+The deployed Next.js application does not connect to the FastAPI mock runtime. It obtains selected spot OHLC bars through `/api/market/spot`, reads the official FOMC calendar through `/api/macro/us-risk`, and derives only transparent price-action classifications from those sources. The FOMC response identifies a `HIGH` scheduled volatility-risk category and its source basis, while withholding direction and magnitude. True order flow, directional macro, GC/MGC futures, setups, and durable outcomes are withheld until dedicated providers are integrated.
 
 ## System Shape
 
@@ -36,7 +36,9 @@ MockMarketDataProvider
 
 The FastAPI `WarRoomRuntime` remains an offline development harness. It pushes calculated mock snapshots about every 850 ms so provider adapters and state-machine behavior can be tested reproducibly. It is not mounted by public web pages.
 
-The intended production architecture uses a separate worker, verified provider normalization and durable storage before publishing snapshots. That path is not implemented. Existing engines still contain demo-specific supply/demand levels and minute-observation assumptions, so live integration requires normalization and engine validation in addition to changing the host.
+The FastAPI production path now supports two explicit modes. `mock` powers local deterministic adapter tests only. `databento` starts independent GC and MGC runtimes with source-normalized CME futures data, dynamic observed levels, live WebSocket snapshots, and durable persistence. It fails closed if a live entitlement is absent.
+
+The public Vercel frontend remains spot-only until the hosted API reports live provider health and its WebSocket client is activated. This prevents an unavailable container, a mock service, or a missing entitlement from being presented as CME data.
 
 ## Persistence Boundary
 
@@ -46,11 +48,11 @@ The intended production architecture uses a separate worker, verified provider n
 
 ## Realtime Contract
 
-`GET /api/snapshot/{symbol}` returns the latest snapshot. `WS /ws/market/{symbol}` sends the same Pydantic snapshot payload whenever the runtime advances. Only `GC` and `MGC` are accepted in V0.1.
+`GET /api/snapshot/{symbol}` returns the latest snapshot. `WS /ws/market/{symbol}` sends the same Pydantic snapshot payload whenever the runtime advances. `GET /api/calendar` returns the licensed calendar only when configured. Only `GC` and `MGC` are accepted in V0.1.
 
 Snapshots carry source mode, provider and clock metadata independently of transport connection state. The browser validates incoming messages, rejects wrong-symbol/corrupt payloads, reconnects with bounded backoff and marks a silent stream stale after 15 seconds. REST fetches time out after 10 seconds. Server CORS and browser WebSocket origins use `CORS_ORIGINS`; shared scenario mutations default to disabled. `/health` distinguishes configured persistence from successful or failed writes.
 
-MGC currently projects the same GC simulated scenario with MGC contract specifications; it is not an independent MGC feed. The setup-history endpoint filters by the actually stored instrument instead of presenting GC history as MGC history.
+GC and MGC now run as independent provider-bound runtimes. This uses two provider sessions in V0.2 so contract attribution is deterministic; a shared multi-symbol session is a later performance optimization, not a change to the engine contracts.
 
 ## AI Boundary
 

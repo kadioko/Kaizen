@@ -139,7 +139,7 @@ def test_runtime_sends_complete_snapshot_record_to_repository():
         await runtime.stop()
 
     asyncio.run(run_runtime())
-    assert [instrument.symbol for instrument in repository.instruments] == ["GC", "MGC"]
+    assert [instrument.symbol for instrument in repository.instruments] == ["GC"]
     assert repository.records
     stored = repository.records[-1]
     assert stored["tick"].symbol == "GC"

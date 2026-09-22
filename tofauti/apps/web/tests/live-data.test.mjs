@@ -48,6 +48,8 @@ test('official FOMC parser returns only future published meeting dates', () => {
   assert.deepEqual(events.map((event) => event.date), ['2026-10-27', '2027-01-26']);
   assert.equal(events[0].title, 'FOMC meeting');
   assert.equal(events[1].duration_days, 2);
+  assert.equal(events[0].expected_volatility_impact, 'HIGH');
+  assert.match(events[0].impact_basis, /Direction and magnitude are not estimated/i);
 });
 
 test('official FOMC parser rejects unparseable rows instead of inventing calendar events', () => {

@@ -16,7 +16,7 @@ Before the deploy order, confirm the shared Kaizen Supabase project is active. I
 ## Deploy Order
 
 1. Verify the base TOFAUTI migration, `add_live_provider_provenance`, and `add_exchange_aggregate_storage` are present in the shared Kaizen Supabase project's migration history.
-2. Create the persistent Docker service from the `codex/tofauti-v01` branch with `tofauti` as service root. Railway uses `railway.json`; Render uses `render.yaml`.
+2. Configure the shared Kaizen Supabase project for persistence, secrets, Cron, and Realtime. For a continuous Databento stream, select a persistent worker that is separate from Supabase Edge Functions; an Edge Function cannot hold the required long-lived Python provider connection.
 3. Set the Databento key, Trading Economics key, Supabase URL, and Supabase service-role key in the host's encrypted environment settings.
 4. Deploy the container. It must fail closed if an entitlement variable is absent or if `DEMO_MODE` is true in Databento mode.
 5. Set `DATABENTO_SCHEMA=mbp-1`, `TOFAUTI_FUTURES=GC,MGC`, and `DATABENTO_PARENT_SYMBOLS=GC=GC.FUT,MGC=MGC.FUT`. Do not enable `NQ` or `MNQ` until their provider parent-symbol mappings, contract-roll behavior, CME display rights, and continuity checks have been independently verified.

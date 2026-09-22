@@ -28,17 +28,7 @@ Use `DATABENTO_SCHEMA=mbp-1` first. It supports trades plus top-of-book. Switch 
 
 ## 3. Deploy The Persistent API
 
-Deploy the Docker service using `render.yaml` or an equivalent persistent container host. Configure these values in the host’s encrypted environment settings:
-
-### Railway
-
-Railway is the recommended option when using the existing workspace account:
-
-1. Create a service from `kadioko/Kaizen`, selecting branch `codex/tofauti-v01`.
-2. Set the service root directory to `tofauti`. Railway reads `railway.json`, builds the Dockerfile, supplies `PORT`, and checks `/health`.
-3. Add the server-only values below in Railway Variables, then generate a public domain after deployment.
-
-The same repository retains `render.yaml` for Render. The runtime configuration is identical.
+Supabase hosts the shared Kaizen database, authentication, secrets, cron jobs, and Realtime fan-out. Configure these values as Supabase secrets for scheduled ingestion, or as encrypted environment values on a future persistent worker when continuous exchange streaming is required:
 
 ```text
 DEMO_MODE=false
@@ -58,7 +48,7 @@ CORS_ORIGINS=https://tofauti.vercel.app
 REDIS_ENABLED=false
 ```
 
-Do not use a Vercel Function for the market worker or WebSocket service. A persistent host is required for continuous exchange ingestion.
+Supabase Edge Functions are appropriate for short, scheduled work such as calendar refreshes. They are not a persistent host for this Python FastAPI process or a continuously connected Databento stream: their request, CPU, and worker-duration limits would make the feed disconnect. Do not use a Vercel Function for the market worker or WebSocket service either.
 
 ## 4. Verify Before Publishing
 

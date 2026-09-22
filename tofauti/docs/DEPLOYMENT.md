@@ -12,7 +12,7 @@ Add the deployed `/settings` URL to Supabase Auth's redirect allowlist for email
 
 ## Architecture
 
-Supabase hosts PostgreSQL, Auth, and row-level security. It does not host the long-running FastAPI worker/WebSocket service. Deploy the API as the Docker service on Railway using `railway.json` (or Render using `render.yaml`), then deploy `apps/web` to Vercel.
+Supabase hosts PostgreSQL, Auth, row-level security, secrets, Cron, and Realtime. It does not provide a permanent runtime for the long-running Python FastAPI worker/WebSocket service. Deploy `apps/web` to Vercel and use Supabase scheduled functions for bounded ingestion work.
 
 ## 1. Supabase Schema
 
@@ -32,7 +32,7 @@ The migration uses `tofauti_`-prefixed tables so TOFAUTI can safely share the Ka
 
 ## 2. Deploy FastAPI
 
-Create a Docker web service from this repository with `tofauti` as the service root. Railway reads the supplied `railway.json`; Render reads `render.yaml`. Both are deliberately configured for live mode and will not start until all secret values are present. Configure these server-only environment variables:
+For a continuous Databento stream, a persistent compute worker will still be required in addition to Supabase. Until that worker is selected, keep only bounded ingestion, persistence, and Realtime work in Supabase. Configure these server-only environment variables as Supabase secrets or worker secrets as applicable:
 
 ```text
 DEMO_MODE=false

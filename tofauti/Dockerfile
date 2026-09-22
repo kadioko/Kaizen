@@ -10,5 +10,4 @@ COPY packages/market-engine /app/packages/market-engine
 COPY apps/api /app/apps/api
 
 EXPOSE 8000
-# Railway supplies PORT at runtime; local Docker keeps the documented 8000 default.
-CMD ["sh", "-c", "uvicorn app.main:app --app-dir apps/api --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["uvicorn", "app.main:app", "--app-dir", "apps/api", "--host", "0.0.0.0", "--port", "8000"]

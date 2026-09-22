@@ -67,7 +67,7 @@ Read [Data Providers](docs/DATA_PROVIDERS.md), [Architecture](docs/ARCHITECTURE.
 
 ## Dependency Policy
 
-The web workspace is verified with Next.js 16, React 19, Tailwind 4, TypeScript 7, Lightweight Charts 5, Lucide 1, Supabase JS 2, and ESLint 9. `npm audit --omit=dev` reports no production vulnerabilities. ESLint stays on its newest compatible 9.x release because the current Next.js ESLint integration is not compatible with ESLint 10.
+The web workspace is verified with Next.js 16, React 19, Tailwind 4, TypeScript 6, Lightweight Charts 5, Lucide 1, Supabase JS 2, and ESLint 9. `npm audit --omit=dev` reports no production vulnerabilities. TypeScript stays on the newest version supported by the current Next.js ESLint integration, and ESLint stays on its newest compatible 9.x release because that integration is not compatible with ESLint 10.
 
 The FastAPI workspace uses the latest compatible FastAPI, Uvicorn, Pydantic, and Databento releases. `databento-dbn` and `pydantic-core` remain on the exact versions required by their respective parent packages; they must not be independently forced forward.
 

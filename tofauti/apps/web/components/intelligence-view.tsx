@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, BookOpenCheck, CheckCircle2, Database, Layers3, Settings2, ShieldCheck, Waves } from 'lucide-react';
+import { ArrowLeft, BookOpenCheck, CheckCircle2, Database, Eye, Globe2, Layers3, Settings2, ShieldCheck, Sparkles, Waves } from 'lucide-react';
 import { analyzeLivePriceAction } from '@/lib/live-price-action';
 import type { LiveSpotSymbol } from '@/lib/live-spot';
 import { AuthPanel } from './auth-panel';
@@ -20,6 +20,7 @@ const content: Record<string, { title: string; eyebrow: string }> = {
   levels: { title: 'Live Level Map', eyebrow: 'Price-action references' },
   journal: { title: 'Observed Setup Journal', eyebrow: 'Evidence retention' },
   guide: { title: 'How To Use TOFAUTI', eyebrow: 'Effective operating workflow' },
+  about: { title: 'About TOFAUTI', eyebrow: 'Market intelligence, made responsibly' },
   settings: { title: 'System Settings', eyebrow: 'Runtime configuration' },
 };
 
@@ -41,6 +42,7 @@ export function IntelligenceView({ view }: { view: string }) {
   const item = content[view] ?? { title: 'Not found', eyebrow: 'TOFAUTI' };
   if (view === 'settings') return <Shell {...item}><SettingsView /></Shell>;
   if (view === 'guide') return <Shell {...item}><GuideView /></Shell>;
+  if (view === 'about') return <Shell {...item}><AboutView /></Shell>;
   return <Shell {...item}><LiveWorkspace>{(workspace) => {
     if (view === 'macro') return <MacroView {...workspace} />;
     if (view === 'order-flow') return <OrderFlowView {...workspace} />;
@@ -84,4 +86,13 @@ function GuideView() {
     ['6', 'Respect unavailable layers', 'TOFAUTI withholds true exchange order flow and directional macro conclusions until dedicated verified data is connected. Do not treat an unavailable layer as neutral or infer it from candles.'],
   ];
   return <><div className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]"><section className="panel rounded-3xl p-6"><div className="flex items-center gap-2 text-violet-200"><BookOpenCheck size={18} /><p className="text-[10px] font-black uppercase tracking-[.18em]">Six-step workflow</p></div><h2 className="mt-4 text-2xl font-black">Use context before interpretation.</h2><p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">The platform is designed to make source-backed context visible quickly. It is not a signal generator, a broker tool, or a substitute for your own risk process.</p><div className="mt-6 space-y-3">{steps.map(([number, title, detail]) => <article key={number} className="grid grid-cols-[38px_1fr] gap-4 rounded-2xl border border-white/[.07] bg-white/[.025] p-4"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-300/10 text-xs font-black text-violet-100">{number}</span><div><p className="font-bold text-zinc-100">{title}</p><p className="mt-1 text-sm leading-6 text-zinc-400">{detail}</p></div></article>)}</div></section><div className="space-y-5"><GlobalSessionClock /><section className="panel rounded-3xl border-amber-300/20 p-6"><div className="flex items-center gap-2 text-amber-200"><CheckCircle2 size={18} /><p className="text-[10px] font-black uppercase tracking-[.18em]">Truthful-use check</p></div><p className="mt-4 text-lg font-black">Before relying on a screen</p><ul className="mt-4 space-y-3 text-sm leading-6 text-zinc-400"><li>Confirm the provider, instrument, and freshness.</li><li>Separate spot price action from futures, order flow, and macro data.</li><li>Read event impact as volatility sensitivity only.</li><li>Do not turn calculated state into a probability or execution instruction.</li></ul></section></div></div></>;
+}
+
+function AboutView() {
+  const principles = [
+    ['Evidence first', 'Each market statement should identify its source, timestamp, and calculation boundary.'],
+    ['Context before action', 'The workspace is designed to help users organise conditions and risk, not to issue execution instructions.'],
+    ['Build for the long term', 'Provider-neutral architecture keeps TOFAUTI extensible while protecting data quality and user trust.'],
+  ];
+  return <div className="space-y-5"><section className="panel relative overflow-hidden rounded-3xl border-violet-300/25 p-7 sm:p-9"><div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-violet-500/15 blur-3xl" /><div className="absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl" /><div className="relative max-w-3xl"><div className="flex items-center gap-2 text-violet-200"><Sparkles size={18} /><p className="text-[10px] font-black uppercase tracking-[.2em]">The TOFAUTI standard</p></div><h2 className="mt-5 text-3xl font-black tracking-tight text-white sm:text-5xl">Clarity for the moments that matter.</h2><p className="mt-5 text-base leading-7 text-zinc-300 sm:text-lg">TOFAUTI is an explainable market-intelligence workspace built to turn verified inputs into readable context. It helps traders see what is present, what is missing, and what needs further confirmation before a decision is made.</p><p className="mt-5 text-sm leading-6 text-zinc-400">The product is intentionally designed around transparent evidence, disciplined workflows, and responsible data boundaries. It is not financial advice, a broker, or a promise of performance.</p></div></section><div className="grid gap-5 lg:grid-cols-[1.05fr_.95fr]"><section className="panel rounded-3xl p-6 sm:p-7"><div className="flex items-center gap-2 text-cyan-200"><Globe2 size={18} /><p className="text-[10px] font-black uppercase tracking-[.18em]">Leadership</p></div><p className="mt-5 text-2xl font-black text-white">Godfrey Kadioko Mariki</p><p className="mt-2 text-sm font-bold uppercase tracking-[.16em] text-violet-200">Managing Director, NECUVA GROUP LIMITED</p><p className="mt-5 text-sm leading-7 text-zinc-400">TOFAUTI was conceived and is being developed by Godfrey Kadioko Mariki as a thoughtful, modern platform for disciplined market understanding. The vision is to pair rigorous engineering with a practical trading workflow that respects both the complexity of markets and the responsibility of the people using the product.</p><p className="mt-4 text-sm leading-7 text-zinc-400">Through NECUVA GROUP LIMITED, the project is being shaped with an emphasis on quality, accountability, and tools that make information more useful without overstating what the data can prove.</p></section><section className="panel rounded-3xl p-6 sm:p-7"><div className="flex items-center gap-2 text-emerald-200"><Eye size={18} /><p className="text-[10px] font-black uppercase tracking-[.18em]">What we stand for</p></div><div className="mt-5 space-y-4">{principles.map(([title, detail]) => <article key={title} className="rounded-2xl border border-white/[.07] bg-white/[.025] p-4"><p className="font-bold text-zinc-100">{title}</p><p className="mt-1 text-sm leading-6 text-zinc-400">{detail}</p></article>)}</div></section></div><section className="panel rounded-3xl border-cyan-300/15 p-6 sm:p-7"><p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">Our direction</p><p className="mt-4 max-w-4xl text-xl font-black leading-8 text-white sm:text-2xl">Build a reliable intelligence layer that helps traders move from raw information to clear, responsible market context.</p><p className="mt-4 max-w-4xl text-sm leading-7 text-zinc-400">As TOFAUTI grows, each new data source, analytic, and assistant feature will remain grounded in verified inputs and surfaced with clear provenance. The goal is not noise or hype. It is a professional operating environment for deliberate market research and review.</p></section></div>;
 }

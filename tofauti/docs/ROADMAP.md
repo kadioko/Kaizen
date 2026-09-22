@@ -3,11 +3,11 @@
 ## Current Readiness
 
 - ✅ Core simulation fixes and regression tests: see [Readiness Audit](READINESS_AUDIT.md).
-- ✅ Truthful source labels, consistent replay arithmetic, full four-layer alignment, bounded stream recovery and quota-aware spot-reference polling.
+- ✅ Truthful source labels, consistent replay arithmetic, full four-layer alignment, bounded stream recovery, selected live spot references, and official FOMC risk dates.
 - 🟠 Simulation MVP only. "Complete" below means implemented demo scope, not a production trading service.
 - 🔴 Persistent backend hosting and live Supabase ingestion/readback still require deployment verification.
 - 🔴 Verified futures feed and real market-data normalization remain unimplemented.
-- 🔴 External XAU/USD reference currently depends on provider credit reset; exhausted quotas are not replaced with mock quotes.
+- 🟠 Spot data is provider-reported but remains an independent reference layer; it is not a futures/order-flow feed and needs a centralized quota budget before scale.
 - ⚪ Durable journal history, complete entry snapshots, cross-engine parity, global API budgeting and live account isolation tests remain open.
 
 ## Complete: V0.1 Vertical Slice
@@ -25,9 +25,10 @@
 - Delta histogram and visible-bar volume-by-price profile, clearly labelled as demo calculations.
 - Supabase migration, RLS policies, server-only persistence repository, browser Auth/watchlist controls, and Docker hosting blueprint.
 
-## Complete: V0.3 External Price Reference
+## Complete: V0.3 External Reference Layer
 
-- Server-only cached Twelve Data `XAU/USD` spot-reference route with timestamp and freshness metadata.
+- Server-only cached Twelve Data selected-spot route for `XAU/USD`, `EUR/USD`, `GBP/USD`, and `USD/JPY`, with timestamp and freshness metadata.
+- Official Federal Reserve FOMC schedule shown as source-backed event risk, without fabricated impact claims.
 - Prominent War Room data-quality labels that distinguish replay transport, external spot reference, and an eventual API stream.
 - Hard boundary preventing the spot reference from being treated as GC/MGC futures, order flow, or a setup input.
 

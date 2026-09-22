@@ -6,7 +6,8 @@ TOFAUTI is an original, explainable market-intelligence war room. It translates 
 
 - Instruments: `GC` Gold Futures and `MGC` Micro Gold Futures.
 - GC/MGC engine data: deterministic mock data, clearly labeled in the UI.
-- External reference: an optional server-side `XAU/USD` spot quote and one-minute bars from Twelve Data, shown separately from the futures replay.
+- Live spot reference: server-side one-minute bars from Twelve Data for `XAU/USD`, `EUR/USD`, `GBP/USD`, and `USD/JPY`, visibly separated from the GC/MGC futures replay.
+- Official macro-risk schedule: upcoming FOMC meeting dates are read from the Federal Reserve calendar. They are scheduled-risk context only, never a directional forecast.
 - Calculated display states: `BULLISH`, `BEARISH`, `NEUTRAL` and `WEAK`, `MODERATE`, `STRONG`.
 - Core sequence: tick -> order flow -> structure -> liquidity -> macro -> alignment -> War Room event -> setup record.
 
@@ -43,11 +44,15 @@ Set `NEXT_PUBLIC_API_URL` only after deploying the FastAPI/WebSocket service to 
 
 For the complete Supabase, Docker-hosting, and Vercel configuration sequence, read [Deployment](docs/DEPLOYMENT.md).
 
-## External Gold Spot Reference
+## Live Spot References
 
-When `TWELVE_DATA_API_KEY` is configured on Vercel, `/api/reference/gold` retrieves `XAU/USD` one-minute bars server-side. The displayed price is the latest returned bar close, paired with that same bar's start timestamp. It is not an executable quote. The reference refreshes every two minutes, validates OHLC and timestamps, and shows elapsed age in UTC. `RECENT BAR` only describes timestamp age, not verified market activity. Quota exhaustion is displayed explicitly and backs off for 30 minutes.
+When `TWELVE_DATA_API_KEY` is configured on Vercel, `/api/market/spot` retrieves current provider-reported one-minute bars server-side for `XAU/USD`, `EUR/USD`, `GBP/USD`, and `USD/JPY`. The dashboard requests only the market selected by the user and refreshes it every five minutes to preserve the configured provider allowance. The displayed price is the latest returned bar close, paired with that same bar's start timestamp. It is not an executable quote. `RECENT BAR` only describes timestamp age, not verified market activity. Quota exhaustion is displayed explicitly and backs off for 30 minutes.
 
-This reference is not a COMEX GC/MGC futures quote, does not include exchange order flow or depth, and never powers a TOFAUTI setup, score, or trade state. A Databento/CME entitlement remains required before the futures engine can be described as live.
+These references are not COMEX GC/MGC futures quotes, do not include exchange order flow or depth, and never power a TOFAUTI setup, score, or trade state. A Databento/CME entitlement remains required before the futures engine can be described as live.
+
+## Official Macro Risk
+
+`/api/macro/us-risk` retrieves FOMC meeting dates from the official Federal Reserve calendar and caches the schedule. It does not invent event times, forecasts, outcomes, or price impact. A licensed economic-calendar provider is still required before the product can show a complete global calendar, consensus, actual values, or a real-time news feed.
 
 ## Demo Mode
 
@@ -86,7 +91,7 @@ npm run build:web
 - `MockAIAnalyst` is available at `POST /api/analyst/query` and only explains the supplied current snapshot. It cannot create market data, fill missing data, or generate an unsupported signal.
 - `MockMarketDataProvider` is intentionally interchangeable with a future provider implementation. The intended next integration prompt is: **“Replace MockMarketDataProvider with Databento/CME data without changing the market-engine interfaces.”**
 - A Vercel preview without a configured hosted API deliberately uses the browser replay; it must never be described as a live market feed.
-- The Twelve Data bridge is a separate XAU/USD spot reference only. It is intentionally prevented from creating GC/MGC order-flow or setup claims.
+- The Twelve Data bridge supplies selected spot-market references only. It is intentionally prevented from creating GC/MGC order-flow or setup claims.
 - The public Supabase URL and anon key may be configured in the web app for Auth. `SUPABASE_SERVICE_ROLE_KEY` is server-only and is used only by FastAPI for market ingestion.
 
 Read [Architecture](docs/ARCHITECTURE.md), [Market Engine](docs/MARKET_ENGINE.md), [Data Providers](docs/DATA_PROVIDERS.md), and [Roadmap](docs/ROADMAP.md) before adding a live feed.

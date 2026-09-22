@@ -5,7 +5,7 @@ import { MarketWorkspaceProvider } from '@/components/use-market-snapshot';
 
 export const metadata: Metadata = {
   title: 'TOFAUTI | Market Intelligence',
-  description: 'An explainable GC/MGC simulation workspace with a separate XAU/USD price reference.',
+  description: 'An explainable GC/MGC simulation workspace with separate provider-reported spot-market references.',
   manifest: '/manifest.webmanifest',
 };
 

@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { browserDemoSnapshot, alignmentFor, strengthFor, directionFor } from '../lib/browser-demo.ts';
-import { parseGoldSeries, referenceAge } from '../lib/gold-spot-reference.ts';
 import { parseSnapshot, sourceLabel } from '../lib/market-validation.ts';
 
 const scenarios = ['bearish_liquidity_sweep', 'bullish_reversal', 'mixed', 'macro_divergence', 'full_alignment', 'invalidation'];
@@ -55,26 +54,6 @@ test('full alignment requires all four layers and opposite pairs remain mixed', 
   assert.equal(alignmentFor(layer(-50), layer(-50), layer(-50), layer(-50)).state, 'FULL_BEARISH_ALIGNMENT');
 });
 
-const now = Date.parse('2026-09-20T12:01:00Z');
-const payload = () => ({ status: 'ok', meta: { symbol: 'XAU/USD', interval: '1min', exchange_timezone: 'UTC' }, values: [{ datetime: '2026-09-20 12:00:00', open: '4000', high: '4002', low: '3999', close: '4001' }] });
-test('reference price and timestamp describe the same bar and age as time passes', () => {
-  const parsed = parseGoldSeries(payload(), now);
-  assert.equal(parsed.price, 4001);
-  assert.equal(parsed.as_of, '2026-09-20T12:00:00.000Z');
-  assert.equal(parsed.freshness_seconds, 60);
-  assert.equal(referenceAge(parsed.as_of, now + 180000), 240);
-  assert.equal(parseGoldSeries(payload(), now + 180000).freshness, 'STALE');
-});
-test('reject malformed, future, duplicated, wrong-market and invalid OHLC references', () => {
-  const changes = [
-    (p) => { p.meta.symbol = 'GC'; }, (p) => { p.meta.interval = '1day'; },
-    (p) => { p.values[0].close = ''; }, (p) => { p.values[0].low = '-1'; },
-    (p) => { p.values[0].high = '1'; }, (p) => { p.values[0].close = 'Infinity'; },
-    (p) => { p.values[0].datetime = '2026-09-21 12:00:00'; },
-    (p) => { p.values.push(p.values[0]); }, (p) => { p.values = []; },
-  ];
-  for (const change of changes) { const input = payload(); change(input); assert.throws(() => parseGoldSeries(input, now)); }
-});
 test('stream rejects wrong symbol, corrupt metrics and bad candles; missing source stays unverified', () => {
   const snapshot = browserDemoSnapshot('mixed', 3);
   assert.throws(() => parseSnapshot(snapshot, 'MGC'));

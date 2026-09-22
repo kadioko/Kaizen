@@ -6,7 +6,7 @@ Set `CORS_ORIGINS` on FastAPI to the exact frontend origins (comma-separated). B
 
 `/health` now includes `persistence_status`: `in_memory`, `pending`, `healthy` or `degraded`. Configured Supabase credentials alone do not prove writes are succeeding. Verify stored rows and restart recovery before calling cloud persistence operational.
 
-The XAU/USD reference uses one time-series request per two minutes with instance coalescing and CDN caching. Provider HTTP 429 responses back off for 30 minutes and are shown explicitly. Multiple regions or other apps can still share/exhaust the upstream allowance; a central budget is not implemented. Never expose `TWELVE_DATA_API_KEY` to browser code.
+The selected spot-reference route serves `XAU/USD`, `EUR/USD`, `GBP/USD`, and `USD/JPY` one-minute bars with per-market five-minute server caching and CDN caching. Provider HTTP 429 responses back off for 30 minutes and are shown explicitly. Multiple regions or other apps can still share/exhaust the upstream allowance; a central budget is not implemented. Never expose `TWELVE_DATA_API_KEY` to browser code. The official FOMC schedule route needs no secret and does not provide a global news calendar.
 
 Add the deployed `/settings` URL to Supabase Auth's redirect allowlist for email confirmations. Verify watchlist instruments are seeded and use separate test accounts to check RLS. These live account checks are still pending.
 
@@ -52,6 +52,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_PUBLIC_ANON_KEY
 TWELVE_DATA_API_KEY=YOUR_SERVER_ONLY_TWELVE_DATA_KEY
 ```
 
-`TWELVE_DATA_API_KEY` is optional and must be stored as a sensitive server-only Vercel value. It enables only the separate `XAU/USD` spot reference endpoint; it does not enable GC/MGC futures, CME data, order flow, or setup generation.
+`TWELVE_DATA_API_KEY` is optional and must be stored as a sensitive server-only Vercel value. It enables only the separate selected-spot reference endpoint; it does not enable GC/MGC futures, CME data, order flow, or setup generation.
 
 Redeploy after adding variables. The service-role key belongs only on the API host. If `NEXT_PUBLIC_API_URL` is omitted, the site intentionally uses its clearly labelled browser demo.

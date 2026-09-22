@@ -9,7 +9,8 @@ import type { Scenario } from '@/lib/browser-demo';
 import { useMarketSnapshot } from './use-market-snapshot';
 import { sourceLabel } from '@/lib/market-validation';
 import { usesBrowserDemo } from '@/lib/market-api';
-import { GoldSpotReference } from './gold-spot-reference';
+import { LiveSpotMarket } from './live-spot-market';
+import { OfficialMacroRisk } from './official-macro-risk';
 
 const scenarios = [
   ['bearish_liquidity_sweep', 'Bearish sweep'], ['bullish_reversal', 'Bullish reversal'], ['mixed', 'Mixed'], ['macro_divergence', 'Macro divergence'], ['full_alignment', 'Full alignment'], ['invalidation', 'Invalidation'],
@@ -49,14 +50,15 @@ export function WarRoom() {
         </header>
 
         <aside role="status" className="mb-5 rounded-2xl border border-amber-300/25 bg-amber-300/5 p-4 text-sm leading-6 text-amber-100">
-          {isReplay ? 'GC/MGC prices, macro factors, order flow, levels and setups below are simulated. Replay time advances one minute per step. The separate XAU/USD card is the only external price reference.' : 'Source: ' + (snapshot.source?.provider ?? 'unverified') + '. A stream connection alone does not verify live data.'}
+          {isReplay ? 'GC/MGC prices, macro factors, order flow, levels and setups below are simulated. Replay time advances one minute per step. The live spot panel above is provider-reported XAU/USD and major-FX bar data, not an input to this replay.' : 'Source: ' + (snapshot.source?.provider ?? 'unverified') + '. A stream connection alone does not verify live data.'}
           {error && <p role="alert" className="mt-2 font-bold">{error}</p>}
         </aside>
+        <div className="mb-5 grid gap-5 xl:grid-cols-[1.55fr_.85fr]"><LiveSpotMarket /><OfficialMacroRisk /></div>
         <div className="grid gap-5 xl:grid-cols-[1.7fr_.85fr]">
           <section className="panel relative overflow-hidden rounded-3xl p-6 sm:p-8"><div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-violet-400/10 blur-3xl" /><div className="relative flex flex-col justify-between gap-6 sm:flex-row sm:items-start"><div><div className="flex items-center gap-3"><p className="text-4xl font-black tracking-tight">{snapshot.instrument.symbol}</p><span className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold tracking-[.15em] text-zinc-400">{snapshot.instrument.exchange}</span></div><p className="mt-1 text-sm text-zinc-400">{snapshot.instrument.name} <span className="text-zinc-600">|</span> {isReplay ? 'simulated contract reference' : 'API-provided market snapshot'}</p></div><div className="sm:text-right"><p className="text-4xl font-black tabular-nums">{snapshot.price.toFixed(1)}</p><p className={`mt-1 inline-flex items-center gap-1 text-sm font-bold ${snapshot.change >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{snapshot.change >= 0 ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}{snapshot.change >= 0 ? '+' : ''}{snapshot.change.toFixed(1)} {isReplay ? 'replay move' : 'session move'}</p></div></div>
             <div className="relative mt-9 border-t border-white/10 pt-7"><p className="text-[10px] font-bold uppercase tracking-[.24em] text-zinc-500">Calculated market state</p><div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-2"><h1 className={`signal-glow text-4xl font-black tracking-tight sm:text-5xl ${stateTone}`}>{snapshot.alignment.direction}</h1><span className="text-lg font-bold text-zinc-300">{snapshot.war_room_state.replaceAll('_', ' ')}</span></div><p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">{snapshot.alignment.summary} TOFAUTI reports calculated state and evidence, not a buy/sell instruction.</p></div>
           </section>
-          <div className="grid gap-5"><GoldSpotReference /><section className="panel rounded-3xl p-6"><div className="flex items-center gap-2 text-violet-300"><Bot size={17} /><p className="text-xs font-black uppercase tracking-[.18em]">Analyst boundary</p></div><p className="mt-4 text-lg font-bold">Explanation only. No invented signals.</p><p className="mt-3 text-sm leading-6 text-zinc-400">These explanations summarize the simulated snapshot. An AI provider is not connected; no AI-generated recommendation is shown.</p><div className="mt-5 rounded-xl border border-violet-300/15 bg-violet-300/5 p-3 text-xs leading-5 text-violet-100">Inspect the four layers and timeline to see why this replay is {snapshot.alignment.direction.toLowerCase()}.</div></section></div>
+          <div className="grid gap-5"><section className="panel rounded-3xl p-6"><div className="flex items-center gap-2 text-violet-300"><Bot size={17} /><p className="text-xs font-black uppercase tracking-[.18em]">Analyst boundary</p></div><p className="mt-4 text-lg font-bold">Explanation only. No invented signals.</p><p className="mt-3 text-sm leading-6 text-zinc-400">These explanations summarize the simulated snapshot. An AI provider is not connected; no AI-generated recommendation is shown.</p><div className="mt-5 rounded-xl border border-violet-300/15 bg-violet-300/5 p-3 text-xs leading-5 text-violet-100">Inspect the four layers and timeline to see why this replay is {snapshot.alignment.direction.toLowerCase()}.</div></section></div>
         </div>
 
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4"><StateCard label="Macro" state={snapshot.macro} /><StateCard label="Structure" state={snapshot.structure} /><StateCard label="Order flow" state={snapshot.order_flow} /><StateCard label="Liquidity" state={snapshot.liquidity} /></div>

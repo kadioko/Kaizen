@@ -1,8 +1,8 @@
-# Readiness Audit - 2026-09-20
+# Readiness Audit - 2026-09-22
 
 ## Release Status
 
-TOFAUTI is a simulation MVP with an optional external XAU/USD bar-close reference. It is not ready to claim live GC/MGC order flow, independent MGC analysis, calibrated trading signals or durable user trade history.
+TOFAUTI is a simulation MVP with provider-reported spot references for XAU/USD and selected major FX pairs. It is not ready to claim live GC/MGC order flow, independent MGC analysis, calibrated trading signals or durable user trade history.
 
 ## Verified Repairs
 
@@ -15,17 +15,18 @@ TOFAUTI is a simulation MVP with an optional external XAU/USD bar-close referenc
 - Narrow-screen cards can shrink around wide tables; tables scroll within their cards instead of forcing horizontal page overflow.
 - REST requests have timeouts. Stream payloads are validated; wrong-symbol or malformed data is rejected. A silent stream is marked stale, with bounded reconnection backoff.
 - Simulation provenance is separate from connection status. Macro factors, fixture levels, approximate volume profiles and temporary journals are labelled accordingly.
-- Gold reference price and time now come from the same bar. Validation rejects corrupt OHLC, duplicate/future timestamps and unexpected markets. UI age continues to advance between fetches.
-- Quote polling uses one request per two minutes, coalesced per instance with CDN caching. Quota failures receive a clear message and 30-minute backoff. No synthetic quote replaces missing external data.
+- Selected spot-reference price and time now come from the same provider bar. Validation rejects corrupt OHLC, duplicate/future timestamps and unexpected markets. UI age continues to advance between fetches.
+- XAU/USD, EUR/USD, GBP/USD and USD/JPY are selectable one-minute spot references. Requests are coalesced per market, cached for five minutes, and subject to a visible 30-minute quota backoff. No synthetic quote replaces missing external data.
+- Upcoming FOMC meeting dates are read from the official Federal Reserve calendar. They are shown as scheduled risk only; the app does not invent release times, consensus, actual values, or price effects.
 - Shared server scenario reset is disabled by default. CORS/WebSocket origins are configured explicitly. API health exposes persistence failures; one subscriber failure cannot stop the runtime.
 - Settings remain reachable without a healthy market connection. Auth failures release pending state, signup redirects back to this app, and duplicate watchlist saves no longer require an absent UPDATE policy.
 
 ## Verification
 
-- 11 browser/data-contract regression tests cover all 75 frames of six scenarios, arithmetic, alignment, stable events, malformed inputs and quote timestamps.
+- 14 browser/data-contract regression tests cover all 75 frames of six scenarios, arithmetic, alignment, stable events, malformed inputs, spot timestamps, and official-calendar parsing.
 - 19 Python tests cover engines, outcomes, persistence failure, historical queries, API startup, REST, GC/MGC WebSockets, CORS and disabled shared mutations.
 - ESLint, TypeScript and Next.js production build passed during this audit. Final UI/deployment checks are recorded in the delivery message.
-- Live Twelve Data check returned HTTP 429: 2,092 daily credits consumed against an 800-credit limit. Reduced polling cannot restore already-exhausted credits; the provider must reset them. Other apps using the same key share this allowance.
+- A live Twelve Data check returned recent XAU/USD, EUR/USD, GBP/USD, and USD/JPY one-minute responses on 2026-09-22. Provider allowance is shared and can still be exhausted by other apps or regions; the UI never replaces a quota failure with a synthetic quote.
 
 ## Remaining Requirements
 

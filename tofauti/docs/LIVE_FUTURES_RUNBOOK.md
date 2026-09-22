@@ -11,11 +11,11 @@ This runbook activates the hosted TOFAUTI futures engine only after each externa
 3. Create a Trading Economics API credential with economic-calendar access for the intended countries. The application currently defaults to United States events.
 4. Keep both credentials server-only. Never put them in Vercel browser variables, source control, screenshots, or support messages.
 
-Before the deploy order, confirm the Supabase project is active. A project listed as `INACTIVE` must be resumed by an owner in Supabase Studio before migrations or database operations can proceed. See [Production Activation](PRODUCTION_ACTIVATION.md).
+Before the deploy order, confirm the shared Kaizen Supabase project is active. Its TOFAUTI schema migrations are already deployed; verify the migration history rather than reapplying them. A project listed as `INACTIVE` must be resumed by an owner in Supabase Studio before database operations can proceed. See [Production Activation](PRODUCTION_ACTIVATION.md).
 
 ## Deploy Order
 
-1. Apply the base TOFAUTI Supabase migration, `20260922103000_add_live_provider_provenance.sql`, and `20260922150000_add_exchange_aggregate_storage.sql` to the Kaizen Supabase project.
+1. Verify the base TOFAUTI migration, `add_live_provider_provenance`, and `add_exchange_aggregate_storage` are present in the shared Kaizen Supabase project's migration history.
 2. Create the persistent Docker service from `render.yaml` with the TOFAUTI directory as service root.
 3. Set the Databento key, Trading Economics key, Supabase URL, and Supabase service-role key in the host's encrypted environment settings.
 4. Deploy the container. It must fail closed if an entitlement variable is absent or if `DEMO_MODE` is true in Databento mode.

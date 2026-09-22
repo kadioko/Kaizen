@@ -2,24 +2,19 @@
 
 This is the required sequence for enabling real GC/MGC exchange intelligence. It is intentionally fail-closed: do not add `NEXT_PUBLIC_API_URL` to Vercel until every validation gate passes.
 
-## 1. Resume And Link Supabase
+## 1. Shared Kaizen Supabase
 
-The Kaizen Supabase project ref is `eohxxjfuvpuublfglcqc`. A personal access token can identify and manage a project, but it cannot replace the interactive project resume action or the database password required by `supabase link` / `supabase db push`.
+The Kaizen Supabase project ref is `eohxxjfuvpuublfglcqc`. TOFAUTI uses this existing shared project; it does not need a separate Supabase instance.
 
-1. Sign into the Supabase Dashboard as a project owner or administrator.
-2. Open the Kaizen project and select **Resume project** if Supabase labels it paused or inactive. Supabase documents that paused projects can be resumed through Studio for up to one year.
-3. Wait for the project status to become active and copy its database password from the project owner’s secure record. Do not place that password in source control.
-4. From the `tofauti` directory, link the CLI and apply the tracked migrations:
+On 2026-09-22, the Kaizen project was verified `ACTIVE_HEALTHY` and the following TOFAUTI migrations were applied through Supabase's tracked Management API migration endpoint:
 
-```powershell
-$env:SUPABASE_ACCESS_TOKEN = "YOUR_PERSONAL_ACCESS_TOKEN"
-npx supabase link --project-ref eohxxjfuvpuublfglcqc
-npx supabase db push
-```
+- `create_tofauti_market_intelligence` (already present)
+- `add_live_provider_provenance`
+- `add_exchange_aggregate_storage`
 
-5. Confirm the base migration plus `20260922103000_add_live_provider_provenance.sql` and `20260922150000_add_exchange_aggregate_storage.sql` appear in the migration history.
+The deployed tables remain RLS-enabled without browser policies because they are server-ingestion data. The FastAPI service uses a server-only Supabase service-role key; public browser access must not be added casually.
 
-The migrations add only `tofauti_`-prefixed market-intelligence tables and source-provenance fields. They do not alter K OG entities.
+For a future migration, use the same tracked Management API migration workflow or reconcile migration history under change control before using a broad `supabase db push`. Do not apply the existing files a second time. If the Kaizen project is paused later, resume it in Supabase Studio before any database operation.
 
 ## 2. Obtain Licensed Provider Access
 

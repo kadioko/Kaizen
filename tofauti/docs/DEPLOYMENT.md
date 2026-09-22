@@ -16,9 +16,9 @@ Supabase hosts PostgreSQL, Auth, and row-level security. It does not host the lo
 
 ## 1. Supabase Schema
 
-The TOFAUTI schema is deployed to the Kaizen Supabase project as the tracked migration `create_tofauti_market_intelligence`. It owns 13 `tofauti_`-prefixed tables and six RLS policies, without modifying K OG tables.
+The TOFAUTI schema is deployed to the shared Kaizen Supabase project as the tracked migrations `create_tofauti_market_intelligence`, `add_live_provider_provenance`, and `add_exchange_aggregate_storage`. It owns isolated `tofauti_`-prefixed market-intelligence tables without modifying K OG tables.
 
-For a new environment, link the intended project and apply `supabase/migrations/20260912193000_create_tofauti_market_intelligence.sql`:
+For a new isolated environment, link the intended project and apply the tracked migrations. The existing Kaizen production project already has them applied; do not apply them again:
 
 ```bash
 supabase login
@@ -26,7 +26,7 @@ supabase link --project-ref YOUR_PROJECT_REF
 supabase db push
 ```
 
-For the Kaizen project’s exact resume, migration, provider-secret, preflight, and Vercel-release order, follow [Production Activation](PRODUCTION_ACTIVATION.md). A Supabase personal access token is not a database password and does not replace a paused-project resume in Supabase Studio.
+For the Kaizen project’s provider-secret, preflight, and Vercel-release order, follow [Production Activation](PRODUCTION_ACTIVATION.md). A Supabase personal access token is sufficient for the audited Management API migration workflow, but neither it nor a service-role key belongs in browser code.
 
 The migration uses `tofauti_`-prefixed tables so TOFAUTI can safely share the Kaizen Supabase project. It enables RLS everywhere and only permits authenticated users to access their own profile and watchlist. Market ingestion remains server-only through the service role.
 

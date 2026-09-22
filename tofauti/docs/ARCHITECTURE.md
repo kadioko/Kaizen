@@ -42,7 +42,7 @@ The public Vercel frontend remains spot-only until the hosted API reports live p
 
 ## Persistence Boundary
 
-`apps/api/app/repository.py` contains the server-only async Supabase PostgREST repository. When `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are both present, each runtime step persists normalized ticks, bars, order-flow buckets, levels, liquidity events, macro states, snapshots, War Room events, setups, and observed 5/15/30/60-minute outcomes. Traded-volume profile snapshots are sampled no more than once per minute; raw ticks remain the source of truth. Without both variables, demo mode remains in memory.
+`apps/api/app/repository.py` contains the server-only async Supabase PostgREST repository. It uses Kaizen's shared Supabase project and writes only `tofauti_`-prefixed tables. When `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are both present, each runtime step persists normalized ticks, bars, order-flow buckets, levels, liquidity events, macro states, snapshots, War Room events, setups, and observed 5/15/30/60-minute outcomes. Traded-volume profile snapshots are sampled no more than once per minute; raw ticks remain the source of truth. Without both variables, demo mode remains in memory.
 
 `supabase/migrations/20260912193000_create_tofauti_market_intelligence.sql` owns `tofauti_`-prefixed tables so the product can share the Kaizen Supabase project without colliding with K OG tables. RLS applies to every table. The service role is reserved for server ingestion; browser users are restricted to their own profiles and watchlists.
 

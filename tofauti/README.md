@@ -2,6 +2,8 @@
 
 TOFAUTI is an explainable live spot-market price-action workspace. It does not issue broker orders, promise outcomes, or display calculated strength as a winning probability.
 
+TOFAUTI is a product area within Kaizen. It uses the shared Kaizen Supabase project with isolated `tofauti_`-prefixed tables and does not create or require a separate database project.
+
 ## Current Public Product
 
 - Live provider-reported one-minute OHLC bars: `XAU/USD`, `EUR/USD`, `GBP/USD`, and `USD/JPY` through a server-side Twelve Data bridge.
@@ -63,7 +65,7 @@ The FastAPI workspace contains a provider-neutral `DatabentoMarketDataProvider` 
 
 `MBP-1` supports top-of-book plus trades. It can calculate delta only where a trade can be matched to the current BBO; unmatched trade volume remains `unknown_volume` and is excluded from delta. `MBP-10` may be selected only when entitled and adds a top-ten market-by-price ladder. It is not a market-by-order feed and TOFAUTI does not call the ladder a full depth heatmap. The runtime builds a traded-volume profile from raw exchange trade volume and samples durable profile snapshots no more than once per minute; raw ticks remain the source of truth.
 
-The adapter is implemented but intentionally inactive until its required server-only entitlement is configured. Use the [live futures runbook](docs/LIVE_FUTURES_RUNBOOK.md) to apply the Supabase migrations, deploy the persistent container service, configure secrets, validate `/health` and `/api/capabilities`, then connect the Vercel frontend. The public site must continue to show the live spot-only boundary until that verification succeeds.
+The Kaizen Supabase schema is deployed for this adapter. The adapter remains intentionally inactive until its required server-only entitlements are configured. Use the [live futures runbook](docs/LIVE_FUTURES_RUNBOOK.md) to deploy the persistent container service, configure secrets, validate `/health` and `/api/capabilities`, then connect the Vercel frontend. The public site must continue to show the live spot-only boundary until that verification succeeds.
 
 The Order Flow page includes a live-engine workspace for delta histogram, cumulative delta, traded-volume profile, and market-by-price depth. It renders only after `NEXT_PUBLIC_API_URL` points to a healthy API that reports an entitled live exchange feed. It otherwise shows a clear withheld state.
 

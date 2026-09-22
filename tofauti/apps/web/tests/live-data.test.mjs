@@ -64,12 +64,22 @@ test('global session clock detects the London and New York overlap in local mark
   assert.equal(describeActiveSessions(sessions), 'London / New York overlap active');
   assert.match(sessions.find((session) => session.id === 'london').localTime, /14:00/);
   assert.match(sessions.find((session) => session.id === 'new-york').localTime, /09:00/);
+  assert.deepEqual(
+    sessions.find((session) => session.id === 'london').transitionLabel,
+    'Closes in',
+  );
+  assert.equal(sessions.find((session) => session.id === 'london').transitionCountdown, '3h 0m');
+  assert.equal(sessions.find((session) => session.id === 'london').transitionAt.toISOString(), '2026-09-22T16:00:00.000Z');
 });
 
 test('global session clock treats regional weekends as closed even when local clock falls in a window', () => {
   const sessions = getMarketSessionStatuses(new Date('2026-09-20T12:00:00Z'));
   assert.equal(sessions.some((session) => session.active), false);
   assert.equal(describeActiveSessions(sessions), 'No defined regional session windows are active');
+  const london = sessions.find((session) => session.id === 'london');
+  assert.equal(london.transitionLabel, 'Opens in');
+  assert.equal(london.transitionCountdown, '19h 0m');
+  assert.equal(london.transitionAt.toISOString(), '2026-09-21T07:00:00.000Z');
 });
 
 function marketFromBars(bars) {

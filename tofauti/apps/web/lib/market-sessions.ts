@@ -12,6 +12,9 @@ export interface MarketSessionStatus extends MarketSessionDefinition {
   localTime: string;
   localWeekday: string;
   windowLabel: string;
+  transitionAt: Date;
+  transitionLabel: 'Opens in' | 'Closes in';
+  transitionCountdown: string;
 }
 
 export const MARKET_SESSIONS: MarketSessionDefinition[] = [
@@ -23,9 +26,22 @@ export const MARKET_SESSIONS: MarketSessionDefinition[] = [
 
 const weekendDays = new Set(['Sat', 'Sun']);
 
-function partsAt(date: Date, timeZone: string) {
+interface LocalDateTimeParts {
+  year: number;
+  month: number;
+  day: number;
+  weekday: string;
+  hour: number;
+  minute: number;
+  zoneName: string;
+}
+
+function partsAt(date: Date, timeZone: string): LocalDateTimeParts {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     weekday: 'short',
     hour: '2-digit',
     minute: '2-digit',
@@ -33,13 +49,78 @@ function partsAt(date: Date, timeZone: string) {
     timeZoneName: 'short',
   }).formatToParts(date);
   const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? '';
-  return { weekday: value('weekday'), hour: Number(value('hour')), minute: Number(value('minute')), zoneName: value('timeZoneName') };
+  return {
+    year: Number(value('year')),
+    month: Number(value('month')),
+    day: Number(value('day')),
+    weekday: value('weekday'),
+    hour: Number(value('hour')),
+    minute: Number(value('minute')),
+    zoneName: value('timeZoneName'),
+  };
 }
 
 function isWithinWindow(hour: number, startHour: number, endHour: number) {
   return startHour < endHour
     ? hour >= startHour && hour < endHour
     : hour >= startHour || hour < endHour;
+}
+
+function offsetMinutesAt(date: Date, timeZone: string) {
+  const value = new Intl.DateTimeFormat('en-GB', { timeZone, timeZoneName: 'longOffset' })
+    .formatToParts(date)
+    .find((part) => part.type === 'timeZoneName')?.value ?? 'GMT';
+  if (value === 'GMT') return 0;
+  const match = value.match(/^GMT([+-])(\d{2}):(\d{2})$/);
+  if (!match) throw new Error(`Could not determine the UTC offset for ${timeZone}.`);
+  const minutes = Number(match[2]) * 60 + Number(match[3]);
+  return match[1] === '+' ? minutes : -minutes;
+}
+
+function calendarDateAfter(local: LocalDateTimeParts, days: number) {
+  const date = new Date(Date.UTC(local.year, local.month - 1, local.day + days));
+  return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() };
+}
+
+function weekdayAt(date: { year: number; month: number; day: number }) {
+  return new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', weekday: 'short' })
+    .format(new Date(Date.UTC(date.year, date.month - 1, date.day)));
+}
+
+function localWallTimeToUtc(date: { year: number; month: number; day: number }, hour: number, timeZone: string) {
+  // Session boundaries occur at 08:00 or 17:00 local time, outside ordinary DST switch hours.
+  const wallClock = new Date(Date.UTC(date.year, date.month - 1, date.day, hour));
+  return new Date(wallClock.getTime() - offsetMinutesAt(wallClock, timeZone) * 60_000);
+}
+
+function formatCountdown(now: Date, transitionAt: Date) {
+  const totalMinutes = Math.max(0, Math.ceil((transitionAt.getTime() - now.getTime()) / 60_000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
+
+function nextTransition(session: MarketSessionDefinition, local: LocalDateTimeParts, now: Date, active: boolean) {
+  const today = { year: local.year, month: local.month, day: local.day };
+  if (active) {
+    const transitionAt = localWallTimeToUtc(today, session.endHour, session.timeZone);
+    return { transitionAt, transitionLabel: 'Closes in' as const, transitionCountdown: formatCountdown(now, transitionAt) };
+  }
+
+  const canOpenToday = !weekendDays.has(local.weekday) && local.hour < session.startHour;
+  if (canOpenToday) {
+    const transitionAt = localWallTimeToUtc(today, session.startHour, session.timeZone);
+    return { transitionAt, transitionLabel: 'Opens in' as const, transitionCountdown: formatCountdown(now, transitionAt) };
+  }
+
+  for (let days = 1; days <= 7; days += 1) {
+    const candidate = calendarDateAfter(local, days);
+    if (!weekendDays.has(weekdayAt(candidate))) {
+      const transitionAt = localWallTimeToUtc(candidate, session.startHour, session.timeZone);
+      return { transitionAt, transitionLabel: 'Opens in' as const, transitionCountdown: formatCountdown(now, transitionAt) };
+    }
+  }
+  throw new Error(`Could not find the next opening for ${session.label}.`);
 }
 
 export function getMarketSessionStatuses(now = new Date()): MarketSessionStatus[] {
@@ -52,6 +133,7 @@ export function getMarketSessionStatuses(now = new Date()): MarketSessionStatus[
       localTime: `${String(local.hour).padStart(2, '0')}:${String(local.minute).padStart(2, '0')} ${local.zoneName}`,
       localWeekday: local.weekday,
       windowLabel: `${String(session.startHour).padStart(2, '0')}:00-${String(session.endHour).padStart(2, '0')}:00 local`,
+      ...nextTransition(session, local, now, active),
     };
   });
 }

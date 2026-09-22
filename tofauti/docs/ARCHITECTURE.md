@@ -60,4 +60,4 @@ GC and MGC now run as independent provider-bound runtimes. This uses two provide
 
 ## Hosting Boundary
 
-Supabase provides database and authentication services. A persistent Docker service can host a future verified futures runtime and WebSockets; `render.yaml` is supplied as one deployment target. Vercel hosts the Next.js frontend and its server-side spot/schedule routes. The public browser does not use the deterministic replay.
+Supabase provides database and authentication services. A persistent Docker service hosts the verified futures runtime and WebSockets; `railway.json` and `render.yaml` are supplied deployment targets. Vercel hosts the Next.js frontend and its server-side spot/schedule routes. The public browser does not use the deterministic replay.

@@ -12,7 +12,7 @@ Add the deployed `/settings` URL to Supabase Auth's redirect allowlist for email
 
 ## Architecture
 
-Supabase hosts PostgreSQL, Auth, and row-level security. It does not host the long-running FastAPI worker/WebSocket service. Deploy the API as the Docker service in `render.yaml` (or an equivalent persistent container host), then deploy `apps/web` to Vercel.
+Supabase hosts PostgreSQL, Auth, and row-level security. It does not host the long-running FastAPI worker/WebSocket service. Deploy the API as the Docker service on Railway using `railway.json` (or Render using `render.yaml`), then deploy `apps/web` to Vercel.
 
 ## 1. Supabase Schema
 
@@ -32,7 +32,7 @@ The migration uses `tofauti_`-prefixed tables so TOFAUTI can safely share the Ka
 
 ## 2. Deploy FastAPI
 
-Create a Docker web service from this repository with `tofauti` as the service root. The supplied `render.yaml` is deliberately configured for live mode and will not start until all secret values are present. Configure these server-only environment variables:
+Create a Docker web service from this repository with `tofauti` as the service root. Railway reads the supplied `railway.json`; Render reads `render.yaml`. Both are deliberately configured for live mode and will not start until all secret values are present. Configure these server-only environment variables:
 
 ```text
 DEMO_MODE=false

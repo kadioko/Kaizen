@@ -6,7 +6,9 @@
 - ✅ Public technical state, rolling levels, range acceptance/rejection, and timeline observations are derived from returned source bars.
 - ✅ Official FOMC dates are shown as source-backed `HIGH` scheduled volatility risk, never as a directional forecast.
 - ✅ Browser replay is removed from the public app and all secondary screens.
-- 🟠 GC/MGC Databento adapter, exchange-derived delta, liquidity events, WebSockets, and Supabase repository are built but await licensed keys, applied migrations, and a persistent host.
+- ✅ The base TOFAUTI market schema, live provenance, and exchange aggregate migrations are deployed in Kaizen's shared Supabase project.
+- 🟠 The XAU/USD Gold Brief, data-status panel, and private review flow are implemented. The `add_tofauti_gold_briefs` migration must be applied and RLS verified with two accounts before calling cloud saving live.
+- 🟠 GC/MGC Databento adapter, exchange-derived delta, liquidity events, WebSockets, and Supabase repository are built but await licensed keys and a persistent worker.
 - 🟠 Delta histogram, cumulative delta, traded-volume profile, and top-ten market-by-price ladder are built as a live-engine surface but await an entitled hosted exchange feed. A full market-by-order heatmap remains unbuilt.
 - 🟠 The calendar adapter is built but awaits a licensed Trading Economics key and host. The public FOMC schedule remains the narrow live fallback.
 - 🟠 Setup outcome aggregation is built around observed elapsed 5/15/30/60-minute paths but awaits durable exchange ingestion before its analytics can be useful.
@@ -33,7 +35,7 @@
 
 ## Phase 4: Measurement
 
-- Persist raw inputs and immutable snapshots before calculated results.
+- Persist raw inputs and immutable source snapshots before calculated results. User-saved spot briefs retain their source bar and review separately from system-generated futures setups.
 - Observed setup outcomes, execution assumptions, historical replay, and data-quality reporting.
 - Probability calibration only after statistically meaningful observed outcomes.
 

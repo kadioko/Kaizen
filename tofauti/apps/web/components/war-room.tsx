@@ -4,6 +4,9 @@ import { ArrowDownRight, ArrowUpRight, Bot, CircleAlert, Gauge, Radio, ShieldAle
 import type { Direction, Strength } from '@/lib/types';
 import { analyzeLivePriceAction, type LivePriceActionLayer } from '@/lib/live-price-action';
 import { liveSpotAge, type LiveSpotMarket as LiveSpotMarketData, type LiveSpotSymbol } from '@/lib/live-spot';
+import { canCalculateCurrentState } from '@/lib/data-status';
+import { DataStatus } from './data-status';
+import { GoldBrief } from './gold-brief';
 import { LiveSpotMarket as LiveSpotMarketPanel } from './live-spot-market';
 import { LiveSpotChart } from './live-spot-chart';
 import { GlobalSessionClock } from './global-session-clock';
@@ -44,12 +47,12 @@ export function WarRoom() {
   const workspace = useLiveSpotMarket('XAU/USD');
   const { timeZone } = useUserTimezone();
   const market = workspace.market;
-  const analysis = market ? analyzeLivePriceAction(market) : null;
+  const analysis = market && canCalculateCurrentState(market, workspace.error, workspace.now) ? analyzeLivePriceAction(market) : null;
   const digits = precisionFor(workspace.selectedMarket);
   const formatPrice = new Intl.NumberFormat(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
   if (!market || !analysis) {
-    return <main className="terminal-grid min-h-screen bg-[#0d0b13] px-4 py-5 text-zinc-100 sm:px-6 lg:px-8"><div className="mx-auto max-w-[1550px]"><header className="mb-6 flex flex-col gap-5 border-b border-white/10 pb-5 xl:flex-row xl:items-center xl:justify-between"><Brand /><TerminalNav /></header><LiveSpotMarketPanel {...workspace} />{workspace.error ? null : <LoadingWarRoom />}</div></main>;
+    return <main className="terminal-grid min-h-screen bg-[#0d0b13] px-4 py-5 text-zinc-100 sm:px-6 lg:px-8"><div className="mx-auto max-w-[1550px]"><header className="mb-6 flex flex-col gap-5 border-b border-white/10 pb-5 xl:flex-row xl:items-center xl:justify-between"><Brand /><TerminalNav /></header><LiveSpotMarketPanel {...workspace} /><div className="mt-5"><DataStatus {...workspace} /></div>{workspace.error || market ? null : <LoadingWarRoom />}</div></main>;
   }
 
   const latest = market.bars.at(-1)!;
@@ -63,6 +66,8 @@ export function WarRoom() {
     <aside role="status" className="mb-5 rounded-2xl border border-cyan-300/25 bg-cyan-300/5 p-4 text-sm leading-6 text-cyan-50"><strong>Live spot price-action mode.</strong> The War Room below processes the selected provider-reported one-minute OHLC bars. No browser replay, simulated GC/MGC price, simulated delta, or mock setup is rendered. True exchange order flow and directional macro inputs remain unavailable until dedicated providers are connected.</aside>
 
     <div className="grid gap-5 2xl:grid-cols-[1.45fr_.85fr_.85fr]"><LiveSpotMarketPanel {...workspace} /><OfficialMacroRisk /><GlobalSessionClock /></div>
+    <div className="mt-5"><DataStatus {...workspace} /></div>
+    {workspace.selectedMarket === 'XAU/USD' && <GoldBrief market={market} analysis={analysis} now={workspace.now} />}
 
     <div className="mt-5 grid gap-5 xl:grid-cols-[1.7fr_.85fr]">
       <section className="panel relative overflow-hidden rounded-3xl p-6 sm:p-8"><div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-cyan-400/10 blur-3xl" /><div className="relative flex flex-col justify-between gap-6 sm:flex-row sm:items-start"><div><div className="flex items-center gap-3"><p className="text-4xl font-black tracking-tight">{market.market}</p><span className="rounded-md border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 text-[10px] font-bold tracking-[.15em] text-cyan-100">SPOT</span></div><p className="mt-1 text-sm text-zinc-400">Provider-reported 1-minute OHLC · latest bar start {formatTimeInZone(market.as_of, timeZone, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}</p></div><div className="sm:text-right"><p className="text-4xl font-black tabular-nums">{formatPrice.format(market.price)}</p><p className={`mt-1 inline-flex items-center gap-1 text-sm font-bold ${analysis.change >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{analysis.change >= 0 ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}{analysis.change >= 0 ? '+' : ''}{formatPrice.format(analysis.change)} ({analysis.change_percent >= 0 ? '+' : ''}{analysis.change_percent.toFixed(3)}%) / 15 bars</p></div></div>

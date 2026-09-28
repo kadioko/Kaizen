@@ -9,12 +9,14 @@ export function useLiveSpotMarket(initialMarket: LiveSpotSymbol = 'XAU/USD') {
   const [error, setError] = useState('');
   const [errorMarket, setErrorMarket] = useState<LiveSpotSymbol | null>(null);
   const [now, setNow] = useState(0);
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
     let timer: number | undefined;
     const controller = new AbortController();
     const refresh = async () => {
+      if (timer) window.clearTimeout(timer);
       let retryMs = 300_000;
       try {
         if (document.visibilityState === 'hidden') return;
@@ -36,20 +38,24 @@ export function useLiveSpotMarket(initialMarket: LiveSpotSymbol = 'XAU/USD') {
       }
     };
     void refresh();
+    const onVisible = () => { if (document.visibilityState === 'visible') void refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
     const clock = window.setInterval(() => setNow(Date.now()), 1000);
     return () => {
       active = false;
       controller.abort();
       if (timer) window.clearTimeout(timer);
       window.clearInterval(clock);
+      document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [selectedMarket]);
+  }, [selectedMarket, refreshVersion]);
 
   return {
     selectedMarket,
     setSelectedMarket,
-    market: market?.market === selectedMarket ? market : null,
+    market: market?.market === selectedMarket && !(errorMarket === selectedMarket && error) ? market : null,
     error: errorMarket === selectedMarket ? error : '',
     now,
+    retry: () => setRefreshVersion((version) => version + 1),
   };
 }

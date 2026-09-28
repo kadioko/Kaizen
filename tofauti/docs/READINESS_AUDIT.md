@@ -14,6 +14,8 @@ TOFAUTI's public web app is a live spot price-action workspace. It is not a live
 - The Global Session Clock shows Sydney, Tokyo, London, and New York regional schedule windows using their own IANA time zones. It is not labelled as measured liquidity, exchange hours, or market participation.
 - Users can select an IANA display timezone in Settings. The preference is browser-local and visible timestamps convert for display without overwriting source timestamps.
 - True order flow is withheld. The current feed does not expose exchange trades, volume, aggressor side, delta, cumulative delta, depth, DOM, or liquidity.
+- A provider failure, a bar older than six minutes, or fewer than twenty returned bars now pauses current-state calculations. The data-status panel shows source, bar age, server fetch age, coverage, and an explicit retry control.
+- The Gold Brief captures source-backed XAU/USD context, the user's monitoring plan, optional invalidation reference, and later review. Cloud saving requires the new owner-scoped `tofauti_gold_briefs` migration and live RLS verification before public release.
 - Secondary Macro, Order Flow, Levels, Journal, and Settings routes use the same live source or explicitly state unavailable coverage.
 
 ## Verification
@@ -27,7 +29,7 @@ TOFAUTI's public web app is a live spot price-action workspace. It is not a live
 1. Connect an entitled futures provider for GC/MGC and validate source quality before showing a live futures view.
 2. Connect trade-level/exchange data before calculating or displaying order-flow metrics.
 3. Connect verified macro sources before assigning any directional macro state.
-4. Host durable ingestion and persist raw inputs, snapshots, events, and observed outcomes before enabling a setup journal or performance analytics.
+4. Host durable exchange ingestion and persist raw inputs, snapshots, events, and observed outcomes before enabling an automatic futures setup journal or performance analytics. The personal Gold Brief is a separate user-authored review record.
 5. Add centralized provider quota budgeting, provider-health telemetry, and market-hours/delay metadata.
 6. Validate authenticated user isolation, watchlists, and storage against live Supabase using dedicated test accounts.
 

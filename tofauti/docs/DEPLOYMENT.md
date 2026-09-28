@@ -30,6 +30,8 @@ For the Kaizen project’s provider-secret, preflight, and Vercel-release order,
 
 The migration uses `tofauti_`-prefixed tables so TOFAUTI can safely share the Kaizen Supabase project. It enables RLS everywhere and only permits authenticated users to access their own profile and watchlist. Market ingestion remains server-only through the service role.
 
+Gold Brief cloud saving uses the separate `20260928120000_add_tofauti_gold_briefs.sql` migration. It seeds GC/MGC watchlist instruments, creates an owner-scoped personal brief table, prevents later edits to captured source context and the original plan, and publishes brief changes through Supabase Realtime. Apply it once through a tracked migration, then test two different authenticated users: each must see and update only their own briefs. Enable `NEXT_PUBLIC_GOLD_BRIEFS_ENABLED=true` in the TOFAUTI Vercel project only after that check passes. Without the flag, the Gold Brief is visible but saving is disabled.
+
 ## 2. Deploy FastAPI
 
 For a continuous Databento stream, a persistent compute worker will still be required in addition to Supabase. Until that worker is selected, keep only bounded ingestion, persistence, and Realtime work in Supabase. Configure these server-only environment variables as Supabase secrets or worker secrets as applicable:

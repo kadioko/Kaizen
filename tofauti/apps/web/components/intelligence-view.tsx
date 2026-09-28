@@ -3,13 +3,16 @@
 import Link from 'next/link';
 import { ArrowLeft, BookOpenCheck, CheckCircle2, Database, Eye, Globe2, Layers3, Settings2, ShieldCheck, Sparkles, Waves } from 'lucide-react';
 import { analyzeLivePriceAction } from '@/lib/live-price-action';
+import { canCalculateCurrentState } from '@/lib/data-status';
 import type { LiveSpotSymbol } from '@/lib/live-spot';
 import { AuthPanel } from './auth-panel';
+import { DataStatus } from './data-status';
 import { ExchangeOrderFlow } from './exchange-order-flow';
 import { GlobalSessionClock } from './global-session-clock';
 import { LiveSpotChart } from './live-spot-chart';
 import { LiveSpotMarket } from './live-spot-market';
 import { OfficialMacroRisk } from './official-macro-risk';
+import { SavedGoldBriefs } from './saved-gold-briefs';
 import { TerminalNav } from './terminal-nav';
 import { TimezoneSettings } from './timezone-settings';
 import { useLiveSpotMarket } from './use-live-spot-market';
@@ -19,7 +22,7 @@ const content: Record<string, { title: string; eyebrow: string }> = {
   macro: { title: 'Macro Risk Schedule', eyebrow: 'Verified source coverage' },
   'order-flow': { title: 'Order Flow Coverage', eyebrow: 'Feed availability' },
   levels: { title: 'Live Level Map', eyebrow: 'Price-action references' },
-  journal: { title: 'Observed Setup Journal', eyebrow: 'Evidence retention' },
+  journal: { title: 'Gold Brief Journal', eyebrow: 'Plan and review history' },
   guide: { title: 'How To Use TOFAUTI', eyebrow: 'Effective operating workflow' },
   about: { title: 'About TOFAUTI', eyebrow: 'Market intelligence, made responsibly' },
   settings: { title: 'System Settings', eyebrow: 'Runtime configuration' },
@@ -35,7 +38,7 @@ function Shell({ title, eyebrow, children }: { title: string; eyebrow: string; c
 
 function LiveWorkspace({ children }: { children: (args: ReturnType<typeof useLiveSpotMarket> & { analysis: ReturnType<typeof analyzeLivePriceAction> }) => React.ReactNode }) {
   const workspace = useLiveSpotMarket('XAU/USD');
-  if (!workspace.market) return <LiveSpotMarket {...workspace} />;
+  if (!workspace.market || !canCalculateCurrentState(workspace.market, workspace.error, workspace.now)) return <><LiveSpotMarket {...workspace} /><div className="mt-5"><DataStatus {...workspace} /></div></>;
   return <>{children({ ...workspace, analysis: analyzeLivePriceAction(workspace.market) })}</>;
 }
 
@@ -44,11 +47,11 @@ export function IntelligenceView({ view }: { view: string }) {
   if (view === 'settings') return <Shell {...item}><SettingsView /></Shell>;
   if (view === 'guide') return <Shell {...item}><GuideView /></Shell>;
   if (view === 'about') return <Shell {...item}><AboutView /></Shell>;
+  if (view === 'journal') return <Shell {...item}><JournalView /></Shell>;
   return <Shell {...item}><LiveWorkspace>{(workspace) => {
     if (view === 'macro') return <MacroView {...workspace} />;
     if (view === 'order-flow') return <OrderFlowView {...workspace} />;
     if (view === 'levels') return <LevelsView {...workspace} />;
-    if (view === 'journal') return <JournalView {...workspace} />;
     return <p className="text-zinc-400">This TOFAUTI view is not available.</p>;
   }}</LiveWorkspace></Shell>;
 }
@@ -69,8 +72,8 @@ function LevelsView({ selectedMarket, setSelectedMarket, market, error, now, ana
   return <><LiveSpotMarket selectedMarket={selectedMarket} setSelectedMarket={setSelectedMarket} market={market} error={error} now={now} /><section className="panel mt-5 rounded-3xl p-6"><div className="mb-5 flex items-center justify-between"><div><p className="text-lg font-black">{market.market} price-action references</p><p className="mt-1 text-sm text-zinc-400">Current provider bar close: <span className="font-mono font-bold text-white">{format.format(market.price)}</span></p></div><Layers3 className="text-cyan-200" /></div><div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-sm"><thead className="border-b border-white/10 text-[10px] uppercase tracking-[.15em] text-zinc-500"><tr><th className="pb-3">Reference</th><th className="pb-3">Price</th><th className="pb-3">Distance</th><th className="pb-3">Strength</th><th className="pb-3">Touches</th></tr></thead><tbody>{analysis.levels.map((level) => <tr key={level.id} className="border-b border-white/[.06] text-zinc-300"><td className="py-4 font-bold text-zinc-100">{level.type}</td><td className="font-mono">{format.format(level.price)}</td><td className={level.distance >= 0 ? 'text-emerald-300' : 'text-rose-300'}>{level.distance >= 0 ? '+' : ''}{format.format(level.distance)}</td><td>{level.strength}</td><td>{level.touches}</td></tr>)}</tbody></table></div><p className="mt-5 text-xs leading-5 text-zinc-500">Levels are mathematical references from returned bars, not manually verified supply, demand, VWAP, or exchange liquidity levels.</p></section></>;
 }
 
-function JournalView({ selectedMarket, setSelectedMarket, market, error, now }: ReturnType<typeof useLiveSpotMarket> & { analysis: ReturnType<typeof analyzeLivePriceAction> }) {
-  return <><LiveSpotMarket selectedMarket={selectedMarket} setSelectedMarket={setSelectedMarket} market={market} error={error} now={now} /><section className="panel mt-5 rounded-3xl p-6"><BookOpenCheck className="text-cyan-200" size={18} /><p className="mt-4 text-lg font-black">No automatic live setup journal yet</p><p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">TOFAUTI does not create, score, or journal a live setup from spot OHLC alone. Durable setup records will begin only after a verified market-data pipeline, optional user authentication, and explicit setup criteria are connected. This avoids presenting a simulated or incomplete record as a live trade journal.</p></section></>;
+function JournalView() {
+  return <><SavedGoldBriefs /><section className="panel mt-5 rounded-3xl p-6"><BookOpenCheck className="text-cyan-200" size={18} /><p className="mt-4 text-lg font-black">System setup journal</p><p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">The personal Gold Brief history above stores your own observed context and review. Automatic futures setups and measured outcomes remain unavailable until verified exchange data and explicit setup criteria are running.</p></section></>;
 }
 
 function SettingsView() {
@@ -84,7 +87,7 @@ function GuideView() {
     ['3', 'Check scheduled risk', 'Read the official FOMC panel before reviewing the latest bars. HIGH, MEDIUM, and LOW are expected-volatility categories, not direction, probability, or price targets.'],
     ['4', 'Choose the right market', 'Select XAU/USD, EUR/USD, GBP/USD, or USD/JPY. Confirm the source, the latest-bar age, and the selected instrument before interpreting any state.'],
     ['5', 'Read the verified layers', 'Structure and range interaction are calculated only from the returned spot OHLC bars. Read their evidence and timeline together; neither is an entry instruction.'],
-    ['6', 'Respect unavailable layers', 'TOFAUTI withholds true exchange order flow and directional macro conclusions until dedicated verified data is connected. Do not treat an unavailable layer as neutral or infer it from candles.'],
+    ['6', 'Write and review your Gold Brief', 'Record the XAU/USD conditions you plan to monitor. After the session, use Journal to compare your plan with what happened. Cloud saving opens after the owner-scoped Kaizen table is verified.'],
   ];
   return <><div className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]"><section className="panel rounded-3xl p-6"><div className="flex items-center gap-2 text-violet-200"><BookOpenCheck size={18} /><p className="text-[10px] font-black uppercase tracking-[.18em]">Six-step workflow</p></div><h2 className="mt-4 text-2xl font-black">Use context before interpretation.</h2><p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">The platform is designed to make source-backed context visible quickly. It is not a signal generator, a broker tool, or a substitute for your own risk process.</p><div className="mt-6 space-y-3">{steps.map(([number, title, detail]) => <article key={number} className="grid grid-cols-[38px_1fr] gap-4 rounded-2xl border border-white/[.07] bg-white/[.025] p-4"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-300/10 text-xs font-black text-violet-100">{number}</span><div><p className="font-bold text-zinc-100">{title}</p><p className="mt-1 text-sm leading-6 text-zinc-400">{detail}</p></div></article>)}</div></section><div className="space-y-5"><GlobalSessionClock /><section className="panel rounded-3xl border-amber-300/20 p-6"><div className="flex items-center gap-2 text-amber-200"><CheckCircle2 size={18} /><p className="text-[10px] font-black uppercase tracking-[.18em]">Truthful-use check</p></div><p className="mt-4 text-lg font-black">Before relying on a screen</p><ul className="mt-4 space-y-3 text-sm leading-6 text-zinc-400"><li>Confirm the provider, instrument, and freshness.</li><li>Separate spot price action from futures, order flow, and macro data.</li><li>Read event impact as volatility sensitivity only.</li><li>Do not turn calculated state into a probability or execution instruction.</li></ul></section></div></div></>;
 }

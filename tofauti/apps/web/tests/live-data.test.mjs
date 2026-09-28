@@ -4,6 +4,8 @@ import { parseLiveSpotSeries, isLiveSpotSymbol, liveSpotAge } from '../lib/live-
 import { nextUpcomingFomcEvents } from '../lib/fomc-schedule.ts';
 import { analyzeLivePriceAction } from '../lib/live-price-action.ts';
 import { describeActiveSessions, getMarketSessionStatuses } from '../lib/market-sessions.ts';
+import { isStandardSpotWeek, spotDataState, canCalculateCurrentState } from '../lib/data-status.ts';
+import { buildGoldBriefSnapshot } from '../lib/gold-brief.ts';
 
 const now = Date.parse('2026-09-22T12:01:00Z');
 const livePayload = (symbol = 'EUR/USD') => ({
@@ -112,4 +114,32 @@ test('live price-action engine flags a rejected upper range without calling it o
   assert.equal(analysis.state, 'RANGE_REJECTION');
   assert.match(analysis.range_interaction.summary, /not exchange liquidity data/i);
   assert.equal('order_flow' in analysis, false);
+});
+
+test('provider failure and aged bars pause current-state calculations', () => {
+  const parsed = parseLiveSpotSeries(livePayload('XAU/USD'), 'XAU/USD', now);
+  const market = { ...parsed, bars: Array.from({ length: 20 }, () => parsed.bars.at(-1)) };
+  assert.equal(spotDataState(market, '', now), 'RECENT');
+  assert.equal(canCalculateCurrentState({ ...market, bars: market.bars.slice(0, 2) }, '', now), false);
+  assert.equal(spotDataState({ ...market, bars: market.bars.slice(0, 2) }, '', now), 'INSUFFICIENT_HISTORY');
+  assert.equal(canCalculateCurrentState(market, 'Provider unavailable', now), false);
+  assert.equal(spotDataState(market, '', now + 400_000), 'STALE');
+  assert.equal(isStandardSpotWeek(Date.parse('2026-09-25T21:01:00Z')), false);
+  assert.equal(isStandardSpotWeek(Date.parse('2026-09-27T21:01:00Z')), true);
+  assert.equal(spotDataState(market, '', Date.parse('2026-09-26T12:00:00Z')), 'OUTSIDE_STANDARD_WEEK');
+});
+
+test('Gold Brief snapshot retains exact source bar and withholds absent schedule', () => {
+  const bars = Array.from({ length: 30 }, (_, index) => {
+    const close = 2600 + index * 0.5;
+    return { time: Math.floor(now / 1000) - (29 - index) * 60, open: close - 0.2, high: close + 0.4, low: close - 0.5, close };
+  });
+  const market = marketFromBars(bars);
+  const snapshot = buildGoldBriefSnapshot(market, analyzeLivePriceAction(market), null, now);
+  assert.equal(snapshot.source.as_of, market.as_of);
+  assert.deepEqual(snapshot.latest_bar, bars.at(-1));
+  assert.equal(snapshot.price, market.price);
+  assert.equal(snapshot.scheduled_risk_status, 'UNAVAILABLE');
+  assert.equal(snapshot.scheduled_risk, null);
+  assert.throws(() => buildGoldBriefSnapshot(market, analyzeLivePriceAction(market), null, now + 400_000));
 });

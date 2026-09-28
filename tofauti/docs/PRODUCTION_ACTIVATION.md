@@ -14,6 +14,8 @@ On 2026-09-22, the Kaizen project was verified `ACTIVE_HEALTHY` and the followin
 
 The deployed tables remain RLS-enabled without browser policies because they are server-ingestion data. The FastAPI service uses a server-only Supabase service-role key; public browser access must not be added casually.
 
+The later `add_tofauti_gold_briefs` migration is a separate owner-scoped personal-record migration. Apply it once, verify read/insert/update isolation with two authenticated accounts, and seed GC/MGC instrument rows before enabling Gold Brief cloud saves and watchlists. Do not treat the existing market-schema migration status as proof that this new personal table is deployed.
+
 For a future migration, use the same tracked Management API migration workflow or reconcile migration history under change control before using a broad `supabase db push`. Do not apply the existing files a second time. If the Kaizen project is paused later, resume it in Supabase Studio before any database operation.
 
 ## 2. Obtain Licensed Provider Access

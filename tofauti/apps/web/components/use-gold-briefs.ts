@@ -15,8 +15,8 @@ export function useGoldBriefs() {
   useEffect(() => {
     if (!supabaseBrowser || !GOLD_BRIEFS_ENABLED) return;
     let active = true;
-    void supabaseBrowser.auth.getUser().then(({ data, error }) => {
-      if (active) { setUserId(data.user?.id ?? null); setAuthReady(true); if (error) setMessage('Could not restore your account session.'); }
+    void supabaseBrowser.auth.getSession().then(({ data, error }) => {
+      if (active) { setUserId(data.session?.user.id ?? null); setAuthReady(true); if (error) setMessage('Could not restore your account session.'); }
     });
     const { data: listener } = supabaseBrowser.auth.onAuthStateChange((_event, session) => { setUserId(session?.user.id ?? null); setAuthReady(true); });
     return () => { active = false; listener.subscription.unsubscribe(); };

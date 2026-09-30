@@ -30,7 +30,7 @@ For the Kaizen project’s provider-secret, preflight, and Vercel-release order,
 
 The migration uses `tofauti_`-prefixed tables so TOFAUTI can safely share the Kaizen Supabase project. It enables RLS everywhere and only permits authenticated users to access their own profile and watchlist. Market ingestion remains server-only through the service role.
 
-Gold Brief cloud saving uses the separate `20260928120000_add_tofauti_gold_briefs.sql` migration. It seeds GC/MGC watchlist instruments, creates an owner-scoped personal brief table, prevents later edits to captured source context and the original plan, and publishes brief changes through Supabase Realtime. Apply it once through a tracked migration, then test two different authenticated users: each must see and update only their own briefs. Enable `NEXT_PUBLIC_GOLD_BRIEFS_ENABLED=true` in the TOFAUTI Vercel project only after that check passes. Without the flag, the Gold Brief is visible but saving is disabled.
+Gold Brief cloud saving uses `20260928120000_add_tofauti_gold_briefs.sql`, applied and registered in the shared Kaizen project's migration history. It seeds GC/MGC watchlist instruments, creates an owner-scoped personal brief table, prevents later edits to captured source context and the original plan, and publishes brief changes through Supabase Realtime. Database inspection confirms four owner-only RLS policies. Temporary authenticated accounts verified owner reads and reviews, blocked cross-account reads, updates, and inserts, and were then deleted with their test rows. Supabase Auth email sign-up is enabled and the exact production `/settings` confirmation redirect is allowlisted. `NEXT_PUBLIC_GOLD_BRIEFS_ENABLED=true` is enabled for Vercel Production only; Preview and Development remain gated.
 
 ## 2. Deploy FastAPI
 
@@ -82,5 +82,7 @@ TWELVE_DATA_API_KEY=YOUR_SERVER_ONLY_TWELVE_DATA_KEY
 ```
 
 `TWELVE_DATA_API_KEY` is optional and must be stored as a sensitive server-only Vercel value. It enables only the separate selected-spot reference endpoint; it does not enable GC/MGC futures, CME data, order flow, or setup generation.
+
+Production also sets `VERCEL_PREVIEW_FEEDBACK_ENABLED=0`. This was needed to complete Vercel's deployment of Next.js immutable static assets; Vercel Toolbar comments remain unchanged in Preview and Development.
 
 Redeploy after adding variables. The service-role key belongs only on the API host. The current public web app does not require `NEXT_PUBLIC_API_URL`: it uses its own server-side spot and official-schedule routes. Do not connect the FastAPI mock runtime to public pages.

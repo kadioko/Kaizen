@@ -1,6 +1,6 @@
 # Capability Audit
 
-Updated: 2026-09-22
+Updated: 2026-09-30
 
 This audit maps common market-intelligence dashboard capabilities to TOFAUTI's verified state. It is a product-scope assessment, not a claim of parity with any third-party product. TOFAUTI uses its own name, visual system, calculations, and documentation.
 
@@ -19,6 +19,7 @@ This audit maps common market-intelligence dashboard capabilities to TOFAUTI's v
 | Effective-use guide | Available | In-product six-step workflow explains how to interpret only the source-backed layers. |
 | Data availability labels | Available | Macro direction and true order flow are withheld when unsupported. |
 | Gold Brief preview | Available | XAU/USD spot context, session windows, calculated bar references, and FOMC date coverage; no trade instruction. |
+| Personal Gold Brief history | Available for authenticated users in Production | Owner-scoped Supabase table; two-account RLS integration check passed for owner reads/reviews and blocked cross-account reads/updates/inserts. Temporary test accounts and records were deleted. |
 | Dynamic data status | Available | Source bar and server fetch ages are shown. Provider failure, old bars, or fewer than twenty bars pause current classifications. |
 
 ## Implemented but Not Publicly Activated
@@ -35,7 +36,6 @@ This audit maps common market-intelligence dashboard capabilities to TOFAUTI's v
 | Top-ten depth ladder | Entitled Databento `MBP-10` schema, hosted FastAPI service, and verified display rights | Market-by-price only; it is not presented as market-by-order depth or a queue heatmap. |
 | GC/MGC observed-outcome analytics | Applied exchange aggregate migration plus healthy Supabase writes | Reports recorded 5/15/30/60-minute MFE, MAE, target and invalidation touches; never a forecast. |
 | NQ/MNQ runtime | Explicit live activation, verified provider parent symbols, and CME entitlement/display review | Catalogued but disabled by default; no symbol mapping is guessed. |
-| Personal Gold Brief history | Apply the new owner-scoped Kaizen migration, verify two-account RLS, then enable `NEXT_PUBLIC_GOLD_BRIEFS_ENABLED` | User-authored plans and reviews only; not system-generated setups or trade results. |
 
 ## Not Built Yet
 

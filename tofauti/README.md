@@ -14,7 +14,7 @@ TOFAUTI is a product area within Kaizen. It uses the shared Kaizen Supabase proj
 - Display-timezone preference: device-detected by default, configurable with an IANA timezone in Settings, and applied to visible bars and War Room timeline times.
 - Effective-use guide: an in-product workflow for timing, risk checks, live-source validation, and safe interpretation boundaries.
 - Data-status panel: selected source, latest bar time and age, server fetch age, coverage limits, retry, and explicit stale/unavailable states. Current-state calculations pause when the source fails, bars age out, or fewer than twenty bars are returned.
-- Gold Brief: an XAU/USD context and planning view based on current spot bars, regional session windows, nearby calculated levels, and the published FOMC schedule. Private cloud saving and review are gated until the new Kaizen Supabase table and RLS are verified.
+- Gold Brief: an XAU/USD context and planning view based on current spot bars, regional session windows, nearby calculated levels, and the published FOMC schedule. Its Kaizen Supabase table is deployed with owner-only RLS and Realtime, and two-account isolation has been verified. Production cloud saving is enabled.
 - Persistent auth and watchlist interfaces remain separately scoped through Supabase.
 
 The public web application no longer mounts the browser replay provider or displays GC/MGC simulated prices, delta, setups, or replay controls.
@@ -32,7 +32,7 @@ The current spot feed cannot provide the following, so TOFAUTI labels them unava
 
 The War Room's `BULLISH`, `BEARISH`, and `NEUTRAL` labels are transparent technical classifications from current returned spot bars only. They are not financial advice or trade instructions.
 
-The optional Gold Brief stores a user-authored plan alongside source metadata and later process review. Its counts measure completed briefs and reviews, not trade results. Set `NEXT_PUBLIC_GOLD_BRIEFS_ENABLED=true` only after applying `20260928120000_add_tofauti_gold_briefs.sql` and confirming owner isolation with two authenticated accounts. The flag defaults to off.
+The optional Gold Brief stores a user-authored plan alongside source metadata and later process review. Its counts measure completed briefs and reviews, not trade results. Migration `20260928120000_add_tofauti_gold_briefs.sql` is applied to the shared Kaizen Supabase project and registered in migration history. Four owner-only policies and the Realtime publication are present. Temporary authenticated accounts verified that users can only read, create, and review their own briefs; those accounts and test rows were removed. `NEXT_PUBLIC_GOLD_BRIEFS_ENABLED=true` is enabled for production only.
 
 ## Run Locally
 
